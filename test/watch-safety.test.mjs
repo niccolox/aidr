@@ -269,7 +269,7 @@ test('the raw log (aidr:busywork) keeps the whole text as filtered lines', () =>
   assert.deepEqual(long.body, ['…']);
 });
 
-test('no module opens a network connection or writes a file, except learn.mjs, which only calls Workers AI', () => {
+test('no module opens a network connection or writes a file, except learn.mjs, which only calls Workers AI or the local claude CLI', () => {
   const here = import.meta.dirname,
     dir = existsSync(join(here, 'code-tutor.mjs')) ? here : join(here, '..', 'lib');
   const sources = readdirSync(dir).filter(f => /\.(mjs|py)$/.test(f) && !f.endsWith('.test.mjs') && f !== 'pack.mjs');
@@ -292,6 +292,8 @@ test('no module opens a network connection or writes a file, except learn.mjs, w
     ),
     ['https://api.cloudflare.com'],
   );
+  // The local Claude path: one spawn, of the claude command, and no other process.
+  assert.deepEqual(learn.match(/\bspawn\([^,]+/g), ["spawn('claude'"]);
   const aidr = readFileSync(join(dir, 'aidr.mjs'), 'utf8');
   assert.match(aidr, /options\.learn \? new Learner/, 'the watch makes a learner only with --learn');
 });

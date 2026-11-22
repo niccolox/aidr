@@ -10,6 +10,7 @@ import {
   allowedLink,
   answerOf,
   checkCard,
+  claudeArgs,
   renderCard,
   requestOf,
   topicOf,
@@ -212,4 +213,74 @@ test('the card in the terminal: memory aid, advice, links, no code line', () => 
   assert.match(lines[1], /EDGE · Expect bad input/);
   assert.match(lines[3], /Docs: {5}https:\/\/docs\.pydantic\.dev\/latest\/concepts\/fields\//);
   assert.match(lines[4], /Tutorial: https:\/\/docs\.pydantic\.dev\/latest\/#example/);
+});
+
+// Owner, 22 November 2026: "update aidr learn to use local Claude if available".
+const pydanticChange = {
+  file: '/work/shop/app/cart.py',
+  before: [],
+  after: ['class CartItem(BaseModel):', '    price: Decimal'],
+};
+const goodCard = {
+  mnemonic: 'FVC · Fields typed, Validate with Field, Compute from fields',
+  advice: 'Keep each rule on the model field, so a bad value fails where it enters and not later in the code.',
+  docs: 'https://docs.pydantic.dev/latest/concepts/fields/',
+  tutorial: 'https://docs.pydantic.dev/latest/concepts/models/',
+};
+
+test('local Claude first when the CLI is there; Workers AI on request or without the CLI', () => {
+  assert.equal(new Learner({ env: {}, claude: true }).provider, 'claude');
+  assert.equal(new Learner({ env: {}, claude: true }).problem(), null, 'no Cloudflare key is needed');
+  assert.equal(new Learner({ env: { AIDR_LEARN_PROVIDER: 'workers-ai' }, claude: true }).provider, 'workers-ai');
+  assert.equal(new Learner({ env: {}, claude: false }).provider, 'workers-ai');
+  assert.match(new Learner({ env: {}, claude: true }).label(), /local Claude \(haiku\)/);
+  assert.match(new Learner({ env: { AIDR_LEARN_CLAUDE_MODEL: 'sonnet' }, claude: true }).label(), /\(sonnet\)/);
+});
+
+test('the Claude call has no tools, settings, MCP servers or saved session, and a schema of the card', () => {
+  const args = claudeArgs('haiku');
+  for (const flag of [
+    '-p',
+    '--no-session-persistence',
+    '--strict-mcp-config',
+    '--disable-slash-commands',
+    '--json-schema',
+  ])
+    assert.ok(args.includes(flag), flag);
+  assert.equal(args[args.indexOf('--tools') + 1], '');
+  assert.equal(args[args.indexOf('--setting-sources') + 1], '');
+  assert.equal(args[args.indexOf('--model') + 1], 'haiku');
+});
+
+test('a card from local Claude passes the same check; a bad, failed or late answer gives no card', async () => {
+  const run = answer => async () => answer;
+  let sent = null;
+  const learner = new Learner({
+    env: {},
+    claude: true,
+    runCli: async (args, input) => {
+      sent = input;
+      return { code: 0, stdout: JSON.stringify({ is_error: false, structured_output: goodCard }) };
+    },
+  });
+  const ok = await learner.card(pydanticChange, { symbol: 'total', models: ['CartItem'] });
+  assert.equal(ok.card.docs, goodCard.docs);
+  assert.ok(!sent.includes('/work/shop'), 'no path is sent');
+  const bad = await new Learner({
+    env: {},
+    claude: true,
+    runCli: run({
+      code: 0,
+      stdout: JSON.stringify({ structured_output: { ...goodCard, docs: 'https://example.com/x' } }),
+    }),
+  }).card(pydanticChange);
+  assert.equal(bad.skipped, 'check');
+  const failed = await new Learner({
+    env: {},
+    claude: true,
+    runCli: run({ code: 1, stdout: '{"is_error":true}' }),
+  }).card(pydanticChange);
+  assert.equal(failed.skipped, 'claude');
+  const late = await new Learner({ env: {}, claude: true, runCli: run({ timeout: true }) }).card(pydanticChange);
+  assert.equal(late.skipped, 'timeout');
 });

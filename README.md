@@ -68,7 +68,7 @@ remove the command, run `npm unlink -g devekko.aidr`.
 | 🌐 `aidr --global` | Every folder, not only this one |
 | 🧜 `aidr --no-mermaid` | Never the Mermaid text (by default it goes to a pipe or a file; `--mermaid` adds it in a terminal) |
 | 📓 `aidr journal [day\|week\|month\|project]` | A journal of the folder as Markdown: sessions, prompts, changes, commits, tests, files and models; `project` gives the lifecycle. `--date YYYY-MM-DD` for another day |
-| 📚 `aidr --learn` | A Learn card under each code change: a memory aid, one line of advice, a link to the official docs and one tutorial. Gemma writes it on Workers AI with your own Cloudflare keys |
+| 📚 `aidr --learn` | A Learn card under each code change: a memory aid, one line of advice, a link to the official docs and one tutorial. Local Claude writes it when the `claude` CLI is on your PATH, else Gemma on Workers AI with your own Cloudflare keys |
 
 With [CodeGraph](https://github.com/colbymchenry/codegraph) and a `.codegraph/` index, aidr draws the callers and
 callees of each changed function. With `python3` on the PATH, it lists the Pydantic models that a change touches,
@@ -152,7 +152,10 @@ several transcript entries counts once. A Claude Code subscription is billed dif
 ## 📚 Learn cards (`--learn`)
 
 `aidr --learn` adds one card under a code change: a memory aid, one line of advice, and links to the official docs and
-one tutorial. Gemma (`@cf/google/gemma-4-26b-a4b-it` on Workers AI) writes each card. aidr checks each card before it
+one tutorial. 🤖 When the Claude Code CLI is on your PATH, local Claude writes each card with your own sign-in
+(`claude -p` in an empty temporary folder, with no tools, no settings, no MCP servers and no saved session; `haiku` by
+default, `AIDR_LEARN_CLAUDE_MODEL` to change it). Otherwise Gemma (`@cf/google/gemma-4-26b-a4b-it` on Workers AI)
+writes it with your Cloudflare keys; `AIDR_LEARN_PROVIDER=workers-ai` keeps Gemma. aidr checks each card before it
 prints it: the links must be on a list of official sites (docs.python.org, docs.pydantic.dev, nodejs.org,
 developer.mozilla.org and more), and a card that fails the check does not show. There is at most one card for each
 change, the same card at most once in 30 minutes, and at most 30 calls an hour.
