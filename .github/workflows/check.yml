@@ -16,7 +16,7 @@ jobs:
       - uses: actions/setup-node@v4
         with:
           node-version: ${{ matrix.node }}
-      - run: node --test 'test/*.test.mjs'
+      - run: node --test test/*.test.mjs
       - name: Only the listed files ship
         run: node scripts/check-pack.mjs
       - name: No install script
