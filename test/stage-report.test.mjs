@@ -1,7 +1,7 @@
 // SPDX-License-Identifier: AGPL-3.0-only
 import test from 'node:test';
 import assert from 'node:assert/strict';
-import { markMoves, parseDiff, rangeOf, renderStage } from '../lib/stage-report.mjs';
+import { graphDrawing, markMoves, modelDrawing, parseDiff, rangeOf, renderStage } from '../lib/stage-report.mjs';
 
 const DIFF = `diff --git a/pkg/a.py b/pkg/a.py
 --- a/pkg/a.py
@@ -121,4 +121,42 @@ test('the report draws the models and the code graph as Mermaid by default, and 
   assert.ok(lines.includes('  n2 -. tests .-> n0'));
   assert.equal(lines.filter(l => l === '```mermaid').length, 2);
   assert.ok(!stage(false).some(l => l.includes('mermaid')));
+});
+
+test('in a terminal the report draws each model as a tree and each code graph as boxes, at most 10', () => {
+  const model = {
+    name: 'CartItem',
+    bases: ['BaseModel'],
+    file: 'app/models.py',
+    line: 21,
+    changed: ['quantity'],
+    fields: [
+      { name: 'product', annotation: 'Product', models: ['Product'] },
+      { name: 'quantity', annotation: 'int', models: [] },
+    ],
+  };
+  assert.deepEqual(modelDrawing([model]), [
+    'CartItem (BaseModel)  app/models.py:21',
+    '├─ product ──▶ Product',
+    '└─ quantity : int  (changed)',
+  ]);
+  const graph = (symbol, n) => ({
+    indexed: true,
+    symbol,
+    file: 'app/cart.py',
+    line: 3,
+    total: n,
+    callers: Array.from({ length: n }, (_, i) => ({ name: 'c' + i })),
+    callees: [{ name: 'money' }],
+    tests: [],
+  });
+  const lines = graphDrawing([graph('small', 1), graph('big', 3)]);
+  assert.equal(lines[0], 'big  app/cart.py:3', 'the most connected first');
+  assert.ok(lines.some(l => l.includes('──▶ big ─────▶ money')));
+  const many = graphDrawing(Array.from({ length: 12 }, (_, i) => graph('s' + i, 1)));
+  assert.equal(many.at(-1), '… 2 more symbols in the table above.');
+  const stage = drawings =>
+    renderStage({ range: 'a..b', files: 1, models: [model], graphs: [graph('total', 2)], mermaid: false, drawings });
+  assert.equal(stage(true).filter(l => l === '```text').length, 2);
+  assert.ok(!stage(false).includes('```text'));
 });

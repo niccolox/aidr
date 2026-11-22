@@ -18,6 +18,7 @@ import {
   sessionIdOf,
   stateOf,
   stepsOf,
+  mermaidMode,
 } from '../lib/aidr.mjs';
 
 const ID = '5734d428-61fb-47cd-81dc-c16f1feabafc';
@@ -243,4 +244,12 @@ test('macOS: ps etime and the lsof working folder', async () => {
   ]);
   assert.equal(lsofFolder('p412\nfcwd\nn/Users/me/repo\n'), '/Users/me/repo');
   assert.equal(lsofFolder('p412\n'), null);
+});
+
+test('diagrams: drawn in a terminal, Mermaid text in a pipe or a file, --mermaid and --no-mermaid', () => {
+  assert.deepEqual(mermaidMode({ argv: [], tty: true }), { text: false, drawings: true });
+  assert.deepEqual(mermaidMode({ argv: ['--mermaid'], tty: true }), { text: true, drawings: true });
+  assert.deepEqual(mermaidMode({ argv: [], tty: false }), { text: true, drawings: false });
+  assert.deepEqual(mermaidMode({ argv: ['--no-mermaid'], tty: false }), { text: false, drawings: false });
+  assert.deepEqual(mermaidMode({ argv: ['--mermaid', '--no-mermaid'], tty: true }), { text: false, drawings: true });
 });

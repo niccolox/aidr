@@ -64,7 +64,7 @@ remove the command, run `npm unlink -g devekko.aidr`.
 | `aidr list` | The Claude Code sessions in operation, once |
 | `aidr stage HEAD~3..HEAD` | The Pydantic models in play and the CodeGraph changes of a commit or a range |
 | `aidr --global` | Every folder, not only this one |
-| `aidr --no-mermaid` | No Mermaid text under the code graphs and the models |
+| `aidr --no-mermaid` | Never the Mermaid text (by default it goes to a pipe or a file; `--mermaid` adds it in a terminal) |
 | `aidr journal [day\|week\|month\|project]` | A journal of the folder as Markdown: sessions, prompts, changes, commits, tests, files and models; `project` gives the lifecycle. `--date YYYY-MM-DD` for another day |
 | `aidr --learn` | A Learn card under each code change: a memory aid, one line of advice, a link to the official docs and one tutorial. Gemma writes it on Workers AI with your own Cloudflare keys |
 
@@ -72,8 +72,10 @@ With [CodeGraph](https://github.com/colbymchenry/codegraph) and a `.codegraph/` 
 callees of each changed function. With `python3` on the PATH, it lists the Pydantic models that a change touches,
 with their fields and links. Long tool calls and background commands show their time and their last line of output.
 
-Each code graph and each set of models also prints as Mermaid (a `flowchart` and a `classDiagram`). Paste it into a
-pull request or a document and GitHub draws it. `--no-mermaid` turns it off.
+In a terminal, aidr draws the code graphs and the models itself, with box-drawing characters. In a pipe or a file
+(`aidr stage HEAD > stage.md`), it writes them as Mermaid text (a `flowchart` and a `classDiagram`): paste it into a
+pull request or a document and GitHub draws it. `--mermaid` shows the Mermaid text in the terminal too;
+`--no-mermaid` leaves it out everywhere.
 
 Run `aidr --help` for all options.
 
