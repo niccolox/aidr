@@ -135,3 +135,50 @@ test('a foreground agent is finished when a transcript holds the result of the A
   assert.equal(by.fg2, 'stalled');
   assert.equal(by.bg1, 'running', 'a launched background agent is not finished by its launch result');
 });
+
+// Owner, 22 November 2026: "completre stalled R1 Prefect directory-agent flow ... last step: SubagentHandback". A
+// background agent that hands its report back gets no end notice, and its last line is old.
+test('a background agent is finished by its delivered hand-back or by finished in its meta file', () => {
+  const root = mkdtempSync(join(tmpdir(), 'aidr-hb-')),
+    file = join(root, 'parent.jsonl'),
+    dir = join(root, 'parent', 'subagents');
+  mkdirSync(dir, { recursive: true });
+  writeFileSync(file, '');
+  const delivered = {
+    type: 'user',
+    timestamp: at(700),
+    message: {
+      content: [{ type: 'tool_result', tool_use_id: 'toolu_H', content: 'Report delivered to your caller.' }],
+    },
+  };
+  const shape = { requestShape: 'background', toolUseId: 'toolu_L' };
+  writeFileSync(
+    join(dir, 'agent-hb1.jsonl'),
+    [line(701, tool('SubagentHandback', 'poteto mode')), JSON.stringify(delivered)].join('\n') + '\n',
+  );
+  writeFileSync(join(dir, 'agent-hb1.meta.json'), JSON.stringify({ description: 'Handed back', ...shape }));
+  writeFileSync(join(dir, 'agent-hb2.jsonl'), line(700, tool('SubagentHandback', 'poteto mode')) + '\n');
+  writeFileSync(join(dir, 'agent-hb2.meta.json'), JSON.stringify({ description: 'Hand-back not delivered', ...shape }));
+  writeFileSync(join(dir, 'agent-hb3.jsonl'), line(700, tool('Read', 'Read a file')) + '\n');
+  writeFileSync(
+    join(dir, 'agent-hb3.meta.json'),
+    JSON.stringify({ description: 'Meta says finished', finished: true, ...shape }),
+  );
+  writeFileSync(
+    join(dir, 'agent-hb4.jsonl'),
+    [
+      line(702, tool('SubagentHandback', 'first report')),
+      JSON.stringify(delivered),
+      line(1, tool('Edit', 'resumed')),
+    ].join('\n') + '\n',
+  );
+  writeFileSync(
+    join(dir, 'agent-hb4.meta.json'),
+    JSON.stringify({ description: 'Resumed after a hand-back', ...shape }),
+  );
+  const by = Object.fromEntries(agentsOf(file, { now: NOW }).map(a => [a.id, a.state]));
+  assert.equal(by.hb1, 'finished');
+  assert.equal(by.hb2, 'stalled', 'a hand-back with no delivered result is not an end');
+  assert.equal(by.hb3, 'finished');
+  assert.equal(by.hb4, 'running', 'work after a hand-back starts the agent again');
+});
