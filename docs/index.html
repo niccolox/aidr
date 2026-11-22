@@ -266,7 +266,7 @@ pre,pre *,code{font-variant-ligatures:none;font-feature-settings:"calt" 0,"liga"
            <span class="c33">│</span> 
            <span class="c33">│</span> I will multiply by the quantity, then add a test.
 <span class="c90">10:43:12</span>  <span class="c34">shop</span> <span class="c33">▌A</span>  🧪 <span class="c36">Bash</span> <span class="c90">|</span> Run the cart tests</pre>
-   <p class="note"><b>Busywork:</b> the raw log. Every prompt, tool call and text of Claude in full, as formatted Markdown.</p>
+   <p class="note"><b>Busywork:</b> everything. Every prompt, tool call and text of Claude in full, as formatted Markdown, and with them the code view, the code graphs, the models, the change events and the stage reports of the other tabs.</p>
   </div>
   <div class="panel" role="tabpanel" id="p-learnings" aria-labelledby="t-learnings" hidden>
    <p class="cmd"><b>$</b> aidr --learn</p>
@@ -450,7 +450,7 @@ Pydantic models: <span class="c93">CartItem</span>.</pre></div></div>
     <tbody>
      <tr><td><code>aidr</code></td><td>Each step of the sessions in this folder, and each change with the reason, the code graph, a note and a question</td></tr>
      <tr><td><code>aidr --changes</code></td><td>Only the significant changes: planned, in process and completed</td></tr>
-     <tr><td><code>aidr --busywork</code></td><td>The raw log: every step, and each text and prompt in full</td></tr>
+     <tr><td><code>aidr --busywork</code></td><td>Everything: every step, each text and prompt in full, and the code view, code graphs, models, change events, progress and stage reports</td></tr>
      <tr><td><code>aidr list</code></td><td>The Claude Code sessions in operation, once</td></tr>
      <tr><td><code>aidr stage a..b</code></td><td>The Pydantic models in play and the code graph changes of a commit range</td></tr>
      <tr><td><code>aidr --global</code></td><td>Every folder, not only this one</td></tr>

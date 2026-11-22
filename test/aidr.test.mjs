@@ -19,6 +19,7 @@ import {
   stateOf,
   stepsOf,
   mermaidMode,
+  optionsOf,
 } from '../lib/aidr.mjs';
 
 const ID = '5734d428-61fb-47cd-81dc-c16f1feabafc';
@@ -252,4 +253,15 @@ test('diagrams: drawn in a terminal, Mermaid text in a pipe or a file, --mermaid
   assert.deepEqual(mermaidMode({ argv: [], tty: false }), { text: true, drawings: false });
   assert.deepEqual(mermaidMode({ argv: ['--no-mermaid'], tty: false }), { text: false, drawings: false });
   assert.deepEqual(mermaidMode({ argv: ['--mermaid', '--no-mermaid'], tty: true }), { text: false, drawings: true });
+});
+
+test('the raw log (aidr:busywork) has every feature: code view, graph, models, change events, progress, stage', () => {
+  const busy = optionsOf(['--busywork'], { tty: true });
+  for (const key of ['code', 'map', 'ontology', 'events', 'stage', 'progress', 'drawings']) assert.ok(busy[key], key);
+  assert.equal(busy.learn, false, 'Learn cards stay off unless asked for (they use the network)');
+  assert.ok(optionsOf(['--busywork', '--learn'], { tty: true }).learn);
+  assert.ok(optionsOf(['--busywork', '--no-code']).code, 'the raw log keeps the code view');
+  const plain = optionsOf([], { tty: true });
+  assert.ok(plain.code && !plain.events, 'the default watch: code view, no change events');
+  assert.ok(!optionsOf(['--no-code']).code);
 });

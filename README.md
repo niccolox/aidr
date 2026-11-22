@@ -60,7 +60,7 @@ remove the command, run `npm unlink -g devekko.aidr`.
 | --- | --- |
 | `aidr` | Each step of the sessions in this folder, and each code change with the reason, a note and a question |
 | `aidr --changes` | Only the significant changes: planned, in process and completed |
-| `aidr --busywork` | The raw log: every step, Claude's text and each prompt in full, as formatted Markdown |
+| `aidr --busywork` | Everything: every step, Claude's text and each prompt in full as formatted Markdown, and the code view, code graphs, models, change events, progress and stage reports of the other views |
 | `aidr list` | The Claude Code sessions in operation, once |
 | `aidr stage HEAD~3..HEAD` | The Pydantic models in play and the CodeGraph changes of a commit or a range |
 | `aidr --global` | Every folder, not only this one |
