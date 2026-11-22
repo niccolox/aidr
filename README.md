@@ -69,6 +69,7 @@ remove the command, run `npm unlink -g devekko.aidr`.
 | 🧜 `aidr --no-mermaid` | Never the Mermaid text (by default it goes to a pipe or a file; `--mermaid` adds it in a terminal) |
 | 📓 `aidr journal [day\|week\|month\|project]` | A journal of the folder as Markdown: sessions, prompts, changes, commits, tests, files and models; `project` gives the lifecycle. `--date YYYY-MM-DD` for another day |
 | 📚 `aidr --learn` | A Learn card under each code change: a memory aid, one line of advice, a link to the official docs and one tutorial. Local Claude writes it when the `claude` CLI is on your PATH, else Gemma on Workers AI with your own Cloudflare keys |
+| 🛡️ `aidr --security` | A Security card under each change at a trust boundary: the impact, the threat, one fix, the NIST SSDF practice and a link. Local Claude writes it with Cloudflare's security-audit skill |
 
 With [CodeGraph](https://github.com/colbymchenry/codegraph) and a `.codegraph/` index, aidr draws the callers and
 callees of each changed function. With `python3` on the PATH, it lists the Pydantic models that a change touches,
@@ -153,25 +154,59 @@ several transcript entries counts once. A Claude Code subscription is billed dif
 
 `aidr --learn` adds one card under a code change: a memory aid, one line of advice, and links to the official docs and
 one tutorial. 🤖 When the Claude Code CLI is on your PATH, local Claude writes each card with your own sign-in
-(`claude -p` in an empty temporary folder, with no tools, no settings, no MCP servers and no saved session; `haiku` by
+(`claude -p` in the system temp folder, with no tools, no settings, no MCP servers and no saved session; `haiku` by
 default, `AIDR_LEARN_CLAUDE_MODEL` to change it). Otherwise Gemma (`@cf/google/gemma-4-26b-a4b-it` on Workers AI)
 writes it with your Cloudflare keys; `AIDR_LEARN_PROVIDER=workers-ai` keeps Gemma. aidr checks each card before it
 prints it: the links must be on a list of official sites (docs.python.org, docs.pydantic.dev, nodejs.org,
 developer.mozilla.org and more), and a card that fails the check does not show. There is at most one card for each
 change, the same card at most once in 30 minutes, and at most 30 calls an hour.
 
+## 🛡️ Security cards (`--security`)
+
+`aidr --security` adds one card under each code change that touches a trust boundary. It gives the impact (none, low,
+medium or high), the threat, what a lower-trust party can now do, one fix, the practice of the US government's
+[NIST SP 800-218 Secure Software Development Framework (SSDF) v1.1](https://csrc.nist.gov/pubs/sp/800/218/final)
+that the change touches, and a link to OWASP, CWE, NIST, CISA or the Cloudflare docs.
+
+```text
+  │ Security · high SQL injection through the search term · data access and tenant scope · app/search.py
+  │    The search term is now pasted into the SQL string instead of bound as a parameter. A caller can add quote
+  │    characters to change the query and read rows beyond the product search.
+  │    Fix:  Restore the bound parameter. Do not build SQL with f-strings. Add a test with a quote in the term.
+  │    SSDF: PW.5 Create source code by adhering to secure coding practices
+  │    Link: https://cheatsheetseries.owasp.org/cheatsheets/SQL_Injection_Prevention_Cheat_Sheet.html
+```
+
+- 🧭 Fixed patterns choose the domain of the change: build and dependencies, cloud deployment, LLM calls, data
+  access, HTTP and sessions, HTML output, sockets and webhooks, processes, or limits. A change in no domain gets no card.
+- ☁️ The prompt holds the core discipline of that domain from Cloudflare's
+  [security-audit skill](https://github.com/cloudflare/security-audit-skill), read from `~/.claude/skills/security-audit`
+  (`AIDR_SECURITY_SKILL` for another folder). Without the skill, aidr uses a short built-in discipline.
+- 🤖 Local Claude writes the card with your own sign-in, with the same locked-down `claude -p` call as `--learn`
+  (`haiku` by default, `AIDR_SECURITY_MODEL` to change it). `--security` needs the `claude` CLI on your PATH.
+- 🔒 The request holds the path relative to the session folder and the changed lines, with secrets masked. A private
+  file is never sent. The prompt tells Claude that the lines are data, not instructions.
+- ✅ aidr checks each card before it prints it: the impact, an SSDF v1.1 practice id, the lengths, plain words and a
+  link on the allowlist. A card that fails does not show. At most one card for each file, function and domain, and
+  at most 30 calls an hour.
+
+A Security card is a first read, not an audit. Medium and high cards need a reachable path in the lines; when the lines
+do not show it, the card says what to check.
+
 ## ⚙️ Requirements
 
 - Node 20 or later, and `git`.
-- Optional: `python3` (Pydantic models), `codegraph` (the code graph), and for `--learn` a Cloudflare account with
-  Workers AI: set `AIDR_CF_ACCOUNT_ID` and `AIDR_CF_API_TOKEN`. aidr never prints them.
+- Optional: `python3` (Pydantic models), `codegraph` (the code graph), the `claude` CLI (`--security`, and
+  `--learn` without a Cloudflare account), and for `--learn` with Gemma a Cloudflare account with Workers AI: set
+  `AIDR_CF_ACCOUNT_ID` and `AIDR_CF_API_TOKEN`. aidr never prints them.
 - Linux or macOS.
 
 ## ❓ Questions
 
 **Does it send my code anywhere?** No. Without `--learn`, aidr opens no network connection. With `--learn`, it sends
 the kind of change, the language and the names of the changed function and models to Workers AI, with your own key.
-It sends the changed lines only with `--learn-code`, with secrets masked, and never a private file.
+It sends the changed lines only with `--learn-code`, with secrets masked, and never a private file. With
+`--security`, it sends the relative path and the changed lines, with secrets masked, to your local `claude` CLI.
 
 **Does it change my files or my sessions?** No. It only reads transcripts and runs read-only `git` commands.
 

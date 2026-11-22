@@ -296,4 +296,7 @@ test('no module opens a network connection or writes a file, except learn.mjs, w
   assert.deepEqual(learn.match(/\bspawn\([^,]+/g), ["spawn('claude'"]);
   const aidr = readFileSync(join(dir, 'aidr.mjs'), 'utf8');
   assert.match(aidr, /options\.learn \? new Learner/, 'the watch makes a learner only with --learn');
+  assert.match(aidr, /options\.security \? new SecurityReviewer/, 'the watch makes a reviewer only with --security');
+  // security.mjs starts no process of its own: it calls learn.mjs's local Claude call.
+  assert.doesNotMatch(readFileSync(join(dir, 'security.mjs'), 'utf8'), /from 'node:child_process'/);
 });
