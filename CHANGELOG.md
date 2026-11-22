@@ -19,6 +19,7 @@
 - aidr --help lists every command and flag on one line each; aidr --explain and aidr --example explain aidr, and
   aidr --security --help, --explain or --example (or any other flag or command) explains that part.
 - --agents is the name of the agent map flag (--heartbeat still works).
+- npm run aidr --all works: aidr reads the flags that npm keeps for itself. The watch names its views on its first line.
 - aidr journal --learn --security: the cards of the day's changes. A dropped card says why in one line.
 - The README and the site show real output of a session with parallel agents (site/capture-real.mjs).
 - aidr --learn uses local Claude when the claude CLI is on the PATH, else Gemma.

@@ -393,3 +393,24 @@ test('aidr journal takes --learn and --security for one day only', async () => {
     errors.join('\n'),
   );
 });
+
+// Owner, 22 November 2026: "this is not aidr --all, where is agent heartbeat etc?" (aidr --all gave --all to npm).
+test('aidr --all: aidr reads the flags that npm kept, only for an aidr script and only its own flags', async () => {
+  const { npmFlags, viewsLine } = await import('../lib/aidr.mjs');
+  const env = {
+    npm_lifecycle_event: 'aidr',
+    npm_config_all: 'true',
+    npm_config_full_diff: 'true',
+    npm_config_loglevel: 'silent',
+    npm_config_explain: 'true',
+  };
+  assert.deepEqual(npmFlags(env).sort(), ['--all', '--explain', '--full-diff']);
+  assert.deepEqual(npmFlags({ ...env, npm_lifecycle_event: 'test' }), [], 'another script is not aidr');
+  assert.deepEqual(npmFlags({ npm_config_all: 'true' }), [], 'not started by npm');
+  assert.match(viewsLine(optionsOf([])), /^Views: none, the minimal watch\. Add flags/);
+  assert.equal(viewsLine(optionsOf(['--code', '--agents', '--security'])), 'Views: --code --agents --security.');
+  assert.match(
+    viewsLine(optionsOf(['--all'])),
+    /--full-diff --map --ontology --stage --progress --agents --commands --changes --busywork\./,
+  );
+});

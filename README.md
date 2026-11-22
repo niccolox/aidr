@@ -226,8 +226,9 @@ aidr --security: adds a Security card under each change at a trust boundary: imp
 More: aidr --security --explain, aidr --security --example.
 ```
 
-`aidr --explain` and `aidr --example` do the same for aidr itself. With npm, put `--` first, because npm keeps
-`--help` for itself: `npm run aidr -- --security --explain`.
+`aidr --explain` and `aidr --example` do the same for aidr itself. From a clone, `npm run aidr --all` and
+`npm run aidr --security --explain` work too: npm keeps those flags, and aidr reads them back. Only `--help` stays
+with npm, so use `npm run aidr:help`. The watch starts with a line that names its views, so a missing flag shows.
 
 ## ⚙️ Requirements
 
