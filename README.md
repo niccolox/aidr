@@ -77,7 +77,7 @@ The watch starts minimal. Each flag turns on one view, and you can combine them:
 | 🧜 `--mermaid` | The Mermaid text of the maps and models, next to the drawings |
 | 🧬 `--stage` | The stage report after each commit |
 | ⏳ `--progress` | The time and last output line of long tool calls and background commands |
-| 💓 `--heartbeat` | The agent map at the start and every 10 minutes |
+| 💓 `--agents` | The agent map at the start and every 10 minutes |
 | 🐚 `--commands` | The command lines of each shell step, with secrets masked |
 | 🎯 `--changes` | The change events: planned, in process and completed |
 | 🗂️ `--busywork` | Every step, Claude's text and each prompt in full |
@@ -87,7 +87,9 @@ The watch starts minimal. Each flag turns on one view, and you can combine them:
 | 🌐 `--global` | Every folder, not only this one. `--outside` shows the lines of files outside it |
 
 `--all` leaves out `--learn` and `--security`, because they call a model: name them too, as in `aidr --all --security`.
-A card that does not come says why in one line. The old `--no-*` flags are gone: aidr stops and names the flag
+❓ `aidr --help` lists every command and flag on one line each. Add `--help`, `--explain` or `--example` after
+any flag or command to read about that part: `aidr --security --explain` gives two paragraphs, and
+`aidr --security --example` shows what it prints. A card that does not come says why in one line. The old `--no-*` flags are gone: aidr stops and names the flag
 that now turns the view on.
 
 With [CodeGraph](https://github.com/colbymchenry/codegraph) and a `.codegraph/` index, aidr draws the callers and

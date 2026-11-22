@@ -232,7 +232,7 @@ test('the command line: watch by default, list and stage as subcommands, --cwd w
   assert.deepEqual(parseArgs(['list', '--global']), { sub: 'list', cwd: null, args: ['--global'] });
   assert.deepEqual(parseArgs(['stage', 'a1..b2', '--cwd', '/repo']), { sub: 'stage', cwd: '/repo', args: ['a1..b2'] });
   assert.match(VERSION, /^\d+\.\d+\.\d+$/);
-  assert.match(HELP, /aidr stage \[commit\|a\.\.b\]/);
+  assert.match(HELP, /stage +\[commit\|a\.\.b\]/);
 });
 
 test('macOS: ps etime and the lsof working folder', async () => {
