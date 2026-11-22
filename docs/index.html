@@ -172,7 +172,7 @@ pre,pre *,code{font-variant-ligatures:none;font-feature-settings:"calt" 0,"liga"
 <body>
 <header class="wrap top">
  <img src="logo.svg" alt="" width="30" height="30"><span class="name">AIDR</span>
- <nav><a class="opt" href="#how">How it works</a><a class="opt" href="#privacy">Privacy</a><a href="https://github.com/niccolox/aidr">GitHub</a></nav>
+ <nav><a class="opt" href="#how">How it works</a><a class="opt" href="#agents">Agents</a><a class="opt" href="#privacy">Privacy</a><a href="https://github.com/niccolox/aidr">GitHub</a></nav>
 </header>
 
 <main>
@@ -298,7 +298,7 @@ pre,pre *,code{font-variant-ligatures:none;font-feature-settings:"calt" 0,"liga"
 
 <section id="why">
  <div class="wrap split">
-  <h2>Claude Code writes faster than you read.</h2>
+  <h2>🤔 Claude Code writes faster than you read.</h2>
   <div class="soft measure">
    <p>After an hour of work, your repository holds code that you did not write and may not be able to explain. A review at the end comes too late, because ten more edits already rest on the first one.</p>
    <p>AIDR shows each change at the time Claude makes it, with the reason next to the lines. You read it while the context is fresh, and you keep the authority over your code.</p>
@@ -308,7 +308,7 @@ pre,pre *,code{font-variant-ligatures:none;font-feature-settings:"calt" 0,"liga"
 
 <section id="how">
  <div class="wrap">
-  <h2>Two terminals, one folder.</h2>
+  <h2>🖥️ Two terminals, one folder.</h2>
   <ol class="steps">
    <li><span class="n">1</span><h3>Install AIDR</h3><p>Clone the repository and link the command. Nothing else is downloaded.</p></li>
    <li><span class="n">2</span><h3>Start Claude Code</h3><p>Work in your project as usual. AIDR needs no plugin, no hook and no change to your settings.</p></li>
@@ -320,7 +320,7 @@ pre,pre *,code{font-variant-ligatures:none;font-feature-settings:"calt" 0,"liga"
 <section id="install">
  <div class="wrap split">
   <div>
-   <h2>Install from source</h2>
+   <h2>📦 Install from source</h2>
    <p class="soft">The npm package <code>devekko.aidr</code> is not published yet. You need Node 20 or later and <code>git</code>.</p>
    <p class="small">Without <code>npm link</code>, run <code>node /path/to/aidr/bin/aidr.mjs</code>. To update, run <code>git pull</code> in the clone. To remove the command, run <code>npm unlink -g devekko.aidr</code>.</p>
   </div>
@@ -340,7 +340,7 @@ pre,pre *,code{font-variant-ligatures:none;font-feature-settings:"calt" 0,"liga"
 <section id="models">
  <div class="wrap split">
   <div>
-   <h2>The Pydantic models a change touches.</h2>
+   <h2>🧬 The Pydantic models a change touches.</h2>
    <p class="soft">In a Python project, AIDR lists the models in play for each edit: their fields, their links to other models, and the fields the change names. It reads the files with Python's <code>ast</code> module, so no code of your project runs.</p>
    <p class="soft">In a terminal, AIDR draws the code graphs and the models itself. In a pipe or a file, it writes them as Mermaid text: paste it into a pull request or a document and GitHub draws it. <code>--mermaid</code> shows the text in the terminal too; <code>--no-mermaid</code> leaves it out.</p>
    <p class="small"><code>aidr stage HEAD~3..HEAD</code> gives the models and the code graph changes of a commit range: tables and drawings in a terminal, Markdown tables and Mermaid in a file.</p>
@@ -383,7 +383,7 @@ pre,pre *,code{font-variant-ligatures:none;font-feature-settings:"calt" 0,"liga"
 
 <section id="journal">
  <div class="wrap split">
-  <h2>A journal of each day, week and month.</h2>
+  <h2>📓 A journal of each day, week and month.</h2>
   <div>
    <p class="soft"><code>aidr journal</code> reads the transcripts of the folder and its git history, and prints what happened: the sessions, the prompts, the changes planned, in process and completed, the commits, the tests that failed, the files and the Pydantic models that changed most.</p>
    <p class="soft"><code>aidr journal week</code> and <code>aidr journal month</code> give one section for each day. <code>aidr journal project</code> gives the lifecycle of the folder: one row for each month, the tags, and when each top folder started.</p>
@@ -442,9 +442,44 @@ Changed most: <span class="c93">total</span> (2), <span class="c93">CartItem</sp
 Pydantic models: <span class="c93">CartItem</span>.</pre></div></div>
 </section>
 
+<section id="agents">
+ <div class="wrap split">
+  <h2>💓 A heartbeat for every agent.</h2>
+  <div>
+   <p class="soft">When Claude Code starts agents of its own, <code>aidr agents</code> draws the map: each session and each agent it started, with its state (running, quiet, stalled, finished or failed), its age, its steps, its last step, and for an agent in a git worktree its commits and open files. The watch prints the map when it starts and every 10 minutes.</p>
+   <p class="soft">🐚 Each shell step shows the command Claude ran under its description, with secrets masked. <code>--no-commands</code> hides them; <code>--no-heartbeat</code> hides the map.</p>
+   <p class="small">🛰️ These samples are real: a session that ran several agents in parallel on 22 November 2026, captured with <code>capture-real.mjs</code>. Home folders show as <code>~</code>.</p>
+  </div>
+ </div>
+ <div class="wrap"><div class="mini journal-term"><p class="cmd"><b>$</b> aidr agents</p><pre>10:07:18  Agent map: 1 session, 2 running, 12 finished (every 10 min)
+  saasx2x.ontology  "Pstack plugin"  58f45bf6  last line 0 s ago
+    ├ finished Comment Sicko on directory modules  age 5 min, 18 steps, heartbeat 3 min ago
+    ├ finished Comment Sicko on parity pin  age 9 min, 14 steps, heartbeat 8 min ago
+    ├ running  DIR-REV-1 R2 models, budget, failures  age 18 min, 116 steps, heartbeat 21 s ago  1 commit, 2 open fil…
+    │   last step: Bash | Read the refresh test fakes and the draft unit tests
+    ├ running  Deslop the storefront public directory  age 25 min, 139 steps, heartbeat 31 s ago  5 commits, 5 open f…
+    │   last step: Bash | Read the views fallback test
+    ├ finished Inventory spec-stage agents  age 11.4 h, 53 steps, heartbeat 11.3 h ago
+    ├ finished Inventory research job agents  age 11.4 h, 60 steps, heartbeat 11.3 h ago
+    ├ finished Inventory support and merchant agents  age 11.4 h, 53 steps, heartbeat 11.3 h ago
+    ├ finished Research primary pattern sources  age 11.4 h, 103 steps, heartbeat 11.3 h ago
+    ├ finished Research agentic workflow patterns  age 11.4 h, 65 steps, heartbeat 11.0 h ago
+    ├ finished React island support case page  age 11.6 h, 185 steps, heartbeat 10.9 h ago
+    ├ finished Rewrite submission decision tests  age 11.6 h, 17 steps, heartbeat 11.5 h ago
+    ├ finished Hono JSX pilot on capital research  age 11.9 h, 183 steps, heartbeat 11.5 h ago
+    ├ finished Directory UX overlap A3 A4 phase 4  age 12.4 h, 375 steps, heartbeat 11.2 h ago
+    └ finished R1 Prefect directory-agent flow  age 12.5 h, 152 steps, heartbeat 11.4 h ago</pre></div></div>
+ <div class="wrap"><div class="mini journal-term"><p class="cmd"><b>$</b> aidr</p><pre>10:07:22  saasx2x.ontology  Bash | Read the site page sections and the sample layout
+    $ cd ~/Projects/saasx2x.ontology; grep -n "&lt;section\|&lt;h2\|&lt;nav\|href=\"#" tools/aidr/site/index.html | cut -c1-17…
+10:07:25  saasx2x.ontology  Bash | Read the journal and commands sections of the page
+    $ cd ~/Projects/saasx2x.ontology; sed -n 288,301p tools/aidr/site/index.html | cut -c1-260; sed -n 302,322p tools…
+10:07:44  saasx2x.ontology  Bash | Read the second capture result
+    $ sleep 1; cat &lt;tmp&gt; 2&gt;/dev/null; sed -n '/# commands/,$p' ~/Projects/saasx2x.ontology/tools/aidr/site/real-strea…</pre></div></div>
+</section>
+
 <section id="commands">
  <div class="wrap">
-  <h2>Commands</h2>
+  <h2>⌨️ Commands</h2>
   <div class="tablewrap">
    <table>
     <tbody>
@@ -452,6 +487,8 @@ Pydantic models: <span class="c93">CartItem</span>.</pre></div></div>
      <tr><td><code>aidr --changes</code></td><td>Only the significant changes: planned, in process and completed</td></tr>
      <tr><td><code>aidr --busywork</code></td><td>Everything: every step, each text and prompt in full, and the code view, code graphs, models, change events, progress and stage reports</td></tr>
      <tr><td><code>aidr list</code></td><td>The Claude Code sessions in operation, once</td></tr>
+     <tr><td><code>aidr agents</code></td><td>💓 The agent map: each agent, its state and its heartbeat (the watch prints it every 10 minutes; <code>--no-heartbeat</code> hides it)</td></tr>
+     <tr><td><code>aidr --no-commands</code></td><td>🐚 The shell steps without their command lines (shown by default, secrets masked)</td></tr>
      <tr><td><code>aidr stage a..b</code></td><td>The Pydantic models in play and the code graph changes of a commit range</td></tr>
      <tr><td><code>aidr --global</code></td><td>Every folder, not only this one</td></tr>
      <tr><td><code>aidr --no-mermaid</code></td><td>Never the Mermaid text (by default it goes to a pipe or a file; <code>--mermaid</code> adds it in a terminal)</td></tr>
@@ -465,8 +502,8 @@ Pydantic models: <span class="c93">CartItem</span>.</pre></div></div>
 
 <section id="privacy">
  <div class="wrap">
-  <h2>It reads. It writes nothing.</h2>
-  <p class="soft measure">The package is about 4,000 lines of JavaScript and Python, formatted with Biome, with no dependencies and no install script. <a href="https://github.com/niccolox/aidr/tree/main/lib">Read it</a> before you run it.</p>
+  <h2>🔒 It reads. It writes nothing.</h2>
+  <p class="soft measure">The package is about 4,400 lines of JavaScript and Python, formatted with Biome, with no dependencies and no install script. <a href="https://github.com/niccolox/aidr/tree/main/lib">Read it</a> before you run it.</p>
   <div class="ledger">
    <div class="yes">
     <h3>Reads</h3>
@@ -492,7 +529,7 @@ Pydantic models: <span class="c93">CartItem</span>.</pre></div></div>
 
 <section id="faq">
  <div class="wrap">
-  <h2>Questions</h2>
+  <h2>❓ Questions</h2>
   <dl class="faq">
    <div><dt>Does it send my code anywhere?</dt><dd>No. Without <code>--learn</code>, AIDR opens no network connection. With it, AIDR sends the kind of change and the names of the changed function and models to Workers AI with your own key. The changed lines go only with <code>--learn-code</code>, with secrets masked.</dd></div>
    <div><dt>Does it change my files or my sessions?</dt><dd>No. It reads transcripts and runs read-only <code>git</code> commands.</dd></div>

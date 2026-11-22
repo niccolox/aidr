@@ -12,3 +12,6 @@
 - aidr journal: a day, week or month journal of a folder, and its project lifecycle, as Markdown.
 - Security: safe() on every printed text, private paths, own-user processes, no writes; no network except --learn.
 - Formatted with Biome.
+- The command lines of each shell step, on by default, with secrets masked (--no-commands hides them).
+- aidr agents: the agent map with each agent's state and heartbeat; the watch prints it every 10 minutes (--no-heartbeat).
+- The README and the site show real output of a session with parallel agents (site/capture-real.mjs).

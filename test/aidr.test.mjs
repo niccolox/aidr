@@ -20,6 +20,7 @@ import {
   stepsOf,
   mermaidMode,
   optionsOf,
+  main,
 } from '../lib/aidr.mjs';
 
 const ID = '5734d428-61fb-47cd-81dc-c16f1feabafc';
@@ -264,4 +265,61 @@ test('the raw log (aidr:busywork) has every feature: code view, graph, models, c
   const plain = optionsOf([], { tty: true });
   assert.ok(plain.code && !plain.events, 'the default watch: code view, no change events');
   assert.ok(!optionsOf(['--no-code']).code);
+});
+
+// Owner, 22 November 2026: "a new flag option which is on by default which is to show the bash commands".
+const shell = command => ({
+  type: 'assistant',
+  timestamp: '2026-11-22T10:00:00.000Z',
+  message: { content: [{ type: 'tool_use', name: 'Bash', input: { command, description: 'Run the tests' } }] },
+});
+
+test('the watch shows the command lines of a shell step by default, and --no-commands shows none', () => {
+  assert.equal(optionsOf([]).commands, true);
+  assert.equal(optionsOf(['--busywork']).commands, true);
+  assert.equal(optionsOf(['--no-commands']).commands, false);
+  const [step] = stepsOf(shell('cd web && node --test'), { commands: optionsOf([]).commands });
+  assert.deepEqual(step.command, ['cd web && node --test']);
+  assert.match(renderStep('repo', '', step), / repo  Bash \| Run the tests\n    \$ cd web && node --test$/);
+  const [off] = stepsOf(shell('cd web && node --test'), { commands: optionsOf(['--no-commands']).commands });
+  assert.equal(off.command, undefined);
+  assert.match(renderStep('repo', '', off), / repo  Bash \| Run the tests$/);
+  const read = {
+    type: 'assistant',
+    message: { content: [{ type: 'tool_use', name: 'Read', input: { file_path: '/a' } }] },
+  };
+  assert.equal(stepsOf(read, { commands: true })[0].command, undefined, 'only a shell step has command lines');
+});
+
+test('the command lines mask secrets and stay short: 12 lines, or 120 in the raw log', () => {
+  const [step] = stepsOf(
+    shell('curl -H "Authorization: Bearer SECRET" x\nCLAUDE_AGENT_KEY=abc123 DB_PASSWORD="p w" run\necho ok'),
+    { commands: true },
+  );
+  const text = step.command.join('\n');
+  assert.ok(!/SECRET|abc123|p w/.test(text), text);
+  assert.match(text, /CLAUDE_AGENT_KEY=•••• DB_PASSWORD=•••• run/);
+  assert.equal(step.command[2], 'echo ok');
+  const long = Array.from({ length: 30 }, (_, n) => 'echo ' + n).join('\n');
+  const [short] = stepsOf(shell(long), { commands: true });
+  assert.equal(short.command.length, 13);
+  assert.equal(short.command.at(-1), '… 18 more lines');
+  assert.equal(stepsOf(shell(long), { commands: true, full: true })[0].command.length, 30);
+  const [evil] = stepsOf(shell('echo \u001b[2Jx'), { commands: true });
+  assert.ok(!evil.command[0].includes('\u001b'), 'no terminal control bytes');
+});
+
+test('--no-commands is a known option', async () => {
+  const errors = [];
+  const original = console.error;
+  console.error = line => errors.push(line);
+  try {
+    assert.notEqual(await main(['--no-commands', '--bogus-option']), 0);
+  } finally {
+    console.error = original;
+  }
+  assert.ok(
+    errors.some(e => /Unknown option: --bogus-option\./.test(e)),
+    errors.join('\n'),
+  );
 });
