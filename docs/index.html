@@ -66,6 +66,7 @@ h1{margin:0;line-height:.9;font-weight:800;font-stretch:75%;font-variation-setti
 .dots i{width:11px;height:11px;border-radius:50%;background:#2f313c}
 .tab{appearance:none;border:0;background:none;color:var(--faint);font:600 14px var(--display);padding:13px 14px 12px;cursor:pointer;border-bottom:2px solid transparent;white-space:nowrap;transition:color .2s}
 .tab:hover{color:var(--ink)}
+.term-caption{margin:10px 2px 0;font-size:13.5px;color:var(--faint)}
 .tab[aria-selected="true"]{color:var(--ink);border-bottom-color:var(--yellow)}
 .panel{padding:18px 22px 22px;overflow-x:auto;scrollbar-color:#30323e var(--well)}
 .cmd{margin:0 0 12px;font:500 13.5px var(--mono);color:var(--soft)}
@@ -89,6 +90,7 @@ pre .line{display:block}
 .c1{font-weight:700;color:#f2f2f7}.c2{opacity:.7}.c3{font-style:italic}.c31{color:var(--red)}.c32{color:var(--green)}.c33{color:var(--yellow)}.c34{color:var(--blue)}.c35{color:var(--violet)}.c36{color:var(--cyan)}.c90{color:#7d7c8c}.c93{color:#f3d58a}.c94{color:var(--blue)}.c95{color:#e39ad8}.c96{color:#8fe0e6}
 
 /* Sections */
+.journal-term{margin-top:28px}
 section{padding-block:clamp(56px,9vw,104px) 0}
 h2{margin:0 0 14px;font-weight:750;font-stretch:85%;font-variation-settings:"opsz" 64;font-size:clamp(1.9rem,3.6vw,2.7rem);line-height:1.05;letter-spacing:-.02em;text-wrap:balance}
 p{margin:0 0 14px}
@@ -289,6 +291,7 @@ pre,pre *,code{font-variant-ligatures:none;font-feature-settings:"calt" 0,"liga"
   </div>
   </div>
  </div>
+ <p class="term-caption">Example output of aidr, drawn by its own code, for an invented shop session.</p>
 </div>
 
 <section id="why">
@@ -376,6 +379,67 @@ pre,pre *,code{font-variant-ligatures:none;font-feature-settings:"calt" 0,"liga"
  </div>
 </section>
 
+<section id="journal">
+ <div class="wrap split">
+  <h2>A journal of each day, week and month.</h2>
+  <div>
+   <p class="soft"><code>aidr journal</code> reads the transcripts of the folder and its git history, and prints what happened: the sessions, the prompts, the changes planned, in process and completed, the commits, the tests that failed, the files and the Pydantic models that changed most.</p>
+   <p class="soft"><code>aidr journal week</code> and <code>aidr journal month</code> give one section for each day. <code>aidr journal project</code> gives the lifecycle of the folder: one row for each month, the tags, and when each top folder started.</p>
+   <p class="small">It prints Markdown and writes no file: <code>aidr journal week &gt; week.md</code> keeps it. No model writes it, so it opens no network connection.</p>
+  </div>
+ </div>
+ <div class="wrap"><div class="mini journal-term"><p class="cmd"><b>$</b> aidr journal</p><pre><span class="c35"><span class="c1">▍ Journal of shop: Sunday, 22 November 2026</span></span>
+
+<span class="c1">1 session · 3 prompts · 2 commits · 3 files changed · 6 edits · 2 test runs (1 failed)</span>
+
+<span class="c35"><span class="c1">▍ Sessions</span></span>
+
+<span class="c36">•</span> <span class="c93">5734d428</span> · 10:40 to 11:52 · 3 prompts
+
+<span class="c35"><span class="c1">▍ Prompts</span></span>
+
+<span class="c36">•</span> 10:40 The cart total is wrong when I buy two mugs.
+<span class="c36">•</span> 11:02 Add a quantity field to the cart line.
+<span class="c36">•</span> 11:40 Run the tests and commit.
+
+<span class="c35"><span class="c1">▍ Changes</span></span>
+
+<span class="c35"><span class="c1">In process</span></span>
+
+<span class="c36">•</span> 11:05 Task: Show the quantity on the invoice
+
+<span class="c35"><span class="c1">Completed</span></span>
+
+<span class="c36">•</span> 10:41 Task: Fix the cart total
+<span class="c36">•</span> 11:03 Task: Add a test for two of the same item
+
+<span class="c35"><span class="c1">▍ Commits</span></span>
+
+<span class="c36">•</span> 10:59 <span class="c93">4d90003b</span> fix(cart): the total counts the quantity of each line
+<span class="c36">•</span> 11:46 <span class="c93">9c1e22a7</span> feat(cart): a quantity on each cart line
+
+<span class="c35"><span class="c1">▍ Tests</span></span>
+
+2 test runs, 1 passed, 1 failed.
+
+<span class="c36">•</span> 10:58 <span class="c1">failed</span> · Run the cart tests
+<span class="c36">•</span> 11:44 passed · Run all tests
+
+<span class="c35"><span class="c1">▍ Files changed most</span></span>
+
+<span class="c1">File              <span class="c90"> │ </span></span>Added<span class="c90"> │ </span>Removed<span class="c90"> │ </span>Commits
+<span class="c90">───────────────────┼───────┼─────────┼────────</span>
+app/cart.py       <span class="c90"> │ </span>14   <span class="c90"> │ </span>3      <span class="c90"> │ </span>2      
+tests/test_cart.py<span class="c90"> │ </span>9    <span class="c90"> │ </span>0      <span class="c90"> │ </span>1      
+app/models.py     <span class="c90"> │ </span>2    <span class="c90"> │ </span>0      <span class="c90"> │ </span>1      
+
+<span class="c35"><span class="c1">▍ Symbols and models</span></span>
+
+Changed most: <span class="c93">total</span> (2), <span class="c93">CartItem</span> (1), <span class="c93">test_two_mugs</span> (1).
+
+Pydantic models: <span class="c93">CartItem</span>.</pre></div></div>
+</section>
+
 <section id="commands">
  <div class="wrap">
   <h2>Commands</h2>
@@ -389,6 +453,7 @@ pre,pre *,code{font-variant-ligatures:none;font-feature-settings:"calt" 0,"liga"
      <tr><td><code>aidr stage a..b</code></td><td>The Pydantic models in play and the code graph changes of a commit range</td></tr>
      <tr><td><code>aidr --global</code></td><td>Every folder, not only this one</td></tr>
      <tr><td><code>aidr --no-mermaid</code></td><td>No Mermaid text under the code graphs and the models</td></tr>
+     <tr><td><code>aidr journal [day|week|month|project]</code></td><td>A journal of the folder as Markdown; <code>--date YYYY-MM-DD</code> for another day</td></tr>
      <tr><td><code>aidr --learn</code></td><td>A Learn card under each change: a memory aid, advice and official links, written by Gemma with your own Cloudflare keys</td></tr>
     </tbody>
    </table>
@@ -399,7 +464,7 @@ pre,pre *,code{font-variant-ligatures:none;font-feature-settings:"calt" 0,"liga"
 <section id="privacy">
  <div class="wrap">
   <h2>It reads. It writes nothing.</h2>
-  <p class="soft measure">The package is about 3,300 lines of JavaScript and Python, formatted with Biome, with no dependencies and no install script. <a href="https://github.com/niccolox/aidr/tree/main/lib">Read it</a> before you run it.</p>
+  <p class="soft measure">The package is about 4,000 lines of JavaScript and Python, formatted with Biome, with no dependencies and no install script. <a href="https://github.com/niccolox/aidr/tree/main/lib">Read it</a> before you run it.</p>
   <div class="ledger">
    <div class="yes">
     <h3>Reads</h3>

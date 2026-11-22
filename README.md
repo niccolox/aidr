@@ -65,6 +65,7 @@ remove the command, run `npm unlink -g devekko.aidr`.
 | `aidr stage HEAD~3..HEAD` | The Pydantic models in play and the CodeGraph changes of a commit or a range |
 | `aidr --global` | Every folder, not only this one |
 | `aidr --no-mermaid` | No Mermaid text under the code graphs and the models |
+| `aidr journal [day\|week\|month\|project]` | A journal of the folder as Markdown: sessions, prompts, changes, commits, tests, files and models; `project` gives the lifecycle. `--date YYYY-MM-DD` for another day |
 | `aidr --learn` | A Learn card under each code change: a memory aid, one line of advice, a link to the official docs and one tutorial. Gemma writes it on Workers AI with your own Cloudflare keys |
 
 With [CodeGraph](https://github.com/colbymchenry/codegraph) and a `.codegraph/` index, aidr draws the callers and
@@ -89,8 +90,16 @@ so no code of your project runs.
 - It masks tokens, keys, passwords and URL passwords in every line it prints.
 - It removes terminal control bytes, so a file or a prompt cannot write to your clipboard or change your screen.
 
-The package is about 3,300 lines of JavaScript and Python, formatted with Biome, with no dependencies and no install script. Read
+The package is about 4,000 lines of JavaScript and Python, formatted with Biome, with no dependencies and no install script. Read
 [lib/](lib/) before you run it.
+
+## Journal (`aidr journal`)
+
+`aidr journal` prints what happened in the folder today: the Claude Code sessions, the prompts, the changes planned,
+in process and completed, the commits, the tests and their result, the long commands, and the files, functions and
+Pydantic models that changed most. `aidr journal week` and `aidr journal month` give one section for each day;
+`aidr journal project` gives the lifecycle: one row for each month, the tags, the first and last change of each top
+folder, and the open tasks. It prints Markdown and writes no file, so `aidr journal week > week.md` keeps it.
 
 ## Learn cards (`--learn`)
 

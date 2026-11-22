@@ -9,5 +9,6 @@
 - Progress of long-running tool calls and background commands.
 - Code graphs as Mermaid flowcharts and Pydantic models as Mermaid class diagrams, by default (--no-mermaid).
 - aidr --learn: a Learn card under each change, written by Gemma on Workers AI with your own keys; off by default.
+- aidr journal: a day, week or month journal of a folder, and its project lifecycle, as Markdown.
 - Security: safe() on every printed text, private paths, own-user processes, no writes; no network except --learn.
 - Formatted with Biome.
