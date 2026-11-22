@@ -248,23 +248,88 @@ test('macOS: ps etime and the lsof working folder', async () => {
   assert.equal(lsofFolder('p412\n'), null);
 });
 
-test('diagrams: drawn in a terminal, Mermaid text in a pipe or a file, --mermaid and --no-mermaid', () => {
+test('diagrams: drawn in a terminal and in a pipe; --mermaid adds the Mermaid text; aidr stage keeps it in a pipe', () => {
   assert.deepEqual(mermaidMode({ argv: [], tty: true }), { text: false, drawings: true });
   assert.deepEqual(mermaidMode({ argv: ['--mermaid'], tty: true }), { text: true, drawings: true });
-  assert.deepEqual(mermaidMode({ argv: [], tty: false }), { text: true, drawings: false });
-  assert.deepEqual(mermaidMode({ argv: ['--no-mermaid'], tty: false }), { text: false, drawings: false });
-  assert.deepEqual(mermaidMode({ argv: ['--mermaid', '--no-mermaid'], tty: true }), { text: false, drawings: true });
+  assert.deepEqual(mermaidMode({ argv: [], tty: false }), { text: false, drawings: true });
+  assert.deepEqual(mermaidMode({ argv: ['--mermaid'], tty: false }), { text: true, drawings: false });
+  assert.deepEqual(mermaidMode({ argv: [], tty: false, report: true }), { text: true, drawings: false });
 });
 
-test('the raw log (aidr:busywork) has every feature: code view, graph, models, change events, progress, stage', () => {
-  const busy = optionsOf(['--busywork'], { tty: true });
-  for (const key of ['code', 'map', 'ontology', 'events', 'stage', 'progress', 'drawings']) assert.ok(busy[key], key);
-  assert.equal(busy.learn, false, 'Learn cards stay off unless asked for (they use the network)');
-  assert.ok(optionsOf(['--busywork', '--learn'], { tty: true }).learn);
-  assert.ok(optionsOf(['--busywork', '--no-code']).code, 'the raw log keeps the code view');
-  const plain = optionsOf([], { tty: true });
-  assert.ok(plain.code && !plain.events, 'the default watch: code view, no change events');
-  assert.ok(!optionsOf(['--no-code']).code);
+// Owner, 22 November 2026: "audit all aidr flags and make aidr run minimal by default, make all aidr flags positive,
+// turn them on by a --security or --commands or --learn, make the aidr flags cumulative".
+test('the watch is minimal by default: every view is off and each positive flag turns on its own view', () => {
+  const none = optionsOf([], { tty: true });
+  for (const key of [
+    'code',
+    'full',
+    'map',
+    'ontology',
+    'stage',
+    'progress',
+    'heartbeat',
+    'commands',
+    'changes',
+    'events',
+    'busywork',
+    'mermaid',
+    'learn',
+    'security',
+  ])
+    assert.equal(none[key], false, key);
+  const one = (flag, key) => {
+    const o = optionsOf([flag], { tty: true });
+    assert.equal(o[key], true, flag);
+    return Object.entries(o)
+      .filter(([k, v]) => v === true && !['drawings', key].includes(k))
+      .map(([k]) => k);
+  };
+  assert.deepEqual(one('--map', 'map'), []);
+  assert.deepEqual(one('--commands', 'commands'), []);
+  assert.deepEqual(one('--security', 'security'), []);
+  assert.deepEqual(one('--full-diff', 'full'), ['code'], '--full-diff implies --code');
+});
+
+test('the flags add up, and --all turns on every view but not the cards, which call a model', () => {
+  const sum = optionsOf(['--code', '--map', '--changes', '--busywork', '--security']);
+  for (const key of ['code', 'map', 'changes', 'events', 'busywork', 'security']) assert.ok(sum[key], key);
+  assert.ok(!sum.ontology && !sum.learn);
+  const all = optionsOf(['--all'], { tty: true });
+  for (const key of [
+    'code',
+    'full',
+    'map',
+    'ontology',
+    'stage',
+    'progress',
+    'heartbeat',
+    'commands',
+    'changes',
+    'busywork',
+  ])
+    assert.ok(all[key], key);
+  assert.ok(!all.learn && !all.security);
+  assert.ok(optionsOf(['--all', '--learn', '--security']).security);
+});
+
+test('an old negative flag stops the watch with the flag that now turns its view on', async () => {
+  const errors = [];
+  const original = console.error;
+  console.error = line => errors.push(line);
+  try {
+    assert.equal(await main(['--no-commands']), 2);
+    assert.equal(await main(['--changes', '--bogus-option']), 2);
+  } finally {
+    console.error = original;
+  }
+  assert.ok(
+    errors.some(e => /--no-commands is gone: .*--commands turns that view on/.test(e)),
+    errors.join('\n'),
+  );
+  assert.ok(
+    errors.some(e => /Unknown option: --bogus-option\./.test(e)),
+    errors.join('\n'),
+  );
 });
 
 // Owner, 22 November 2026: "a new flag option which is on by default which is to show the bash commands".
@@ -274,14 +339,11 @@ const shell = command => ({
   message: { content: [{ type: 'tool_use', name: 'Bash', input: { command, description: 'Run the tests' } }] },
 });
 
-test('the watch shows the command lines of a shell step by default, and --no-commands shows none', () => {
-  assert.equal(optionsOf([]).commands, true);
-  assert.equal(optionsOf(['--busywork']).commands, true);
-  assert.equal(optionsOf(['--no-commands']).commands, false);
-  const [step] = stepsOf(shell('cd web && node --test'), { commands: optionsOf([]).commands });
+test('--commands shows the command lines of a shell step; without it the step shows its description', () => {
+  const [step] = stepsOf(shell('cd web && node --test'), { commands: optionsOf(['--commands']).commands });
   assert.deepEqual(step.command, ['cd web && node --test']);
   assert.match(renderStep('repo', '', step), / repo  Bash \| Run the tests\n    \$ cd web && node --test$/);
-  const [off] = stepsOf(shell('cd web && node --test'), { commands: optionsOf(['--no-commands']).commands });
+  const [off] = stepsOf(shell('cd web && node --test'), { commands: optionsOf([]).commands });
   assert.equal(off.command, undefined);
   assert.match(renderStep('repo', '', off), / repo  Bash \| Run the tests$/);
   const read = {
@@ -309,17 +371,25 @@ test('the command lines mask secrets and stay short: 12 lines, or 120 in the raw
   assert.ok(!evil.command[0].includes('\u001b'), 'no terminal control bytes');
 });
 
-test('--no-commands is a known option', async () => {
+test('the minimal watch shows a code change as one line: the file and its line counts; a private file its name', async () => {
+  const { changeLine } = await import('../lib/aidr.mjs');
+  const look = { icons: false, color: false };
+  assert.equal(changeLine({ file: '/r/app/a.py', before: ['x'], after: ['y', 'z'] }, '/r', look), '  │ app/a.py +2 −1');
+  assert.equal(changeLine({ file: '/r/.env', before: [], after: ['K=v'] }, '/r', look), '  │ .env private');
+});
+
+test('aidr journal takes --learn and --security for one day only', async () => {
   const errors = [];
   const original = console.error;
   console.error = line => errors.push(line);
   try {
-    assert.notEqual(await main(['--no-commands', '--bogus-option']), 0);
+    assert.equal(await main(['journal', 'week', '--security']), 2);
+    assert.equal(await main(['journal', '--bogus']), 2);
   } finally {
     console.error = original;
   }
   assert.ok(
-    errors.some(e => /Unknown option: --bogus-option\./.test(e)),
+    errors.some(e => /for one day/.test(e)),
     errors.join('\n'),
   );
 });

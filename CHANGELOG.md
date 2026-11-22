@@ -14,6 +14,9 @@
 - Formatted with Biome.
 - The command lines of each shell step, on by default, with secrets masked (--no-commands hides them).
 - aidr agents: the agent map with each agent's state and heartbeat; the watch prints it every 10 minutes (--no-heartbeat).
+- The watch is minimal by default. Every flag is positive and the flags add up; --all turns on every view. The old
+  --no-* flags stop with the flag that replaces them.
+- aidr journal --learn --security: the cards of the day's changes. A dropped card says why in one line.
 - The README and the site show real output of a session with parallel agents (site/capture-real.mjs).
 - aidr --learn uses local Claude when the claude CLI is on the PATH, else Gemma.
 - aidr --security: a Security card under each change at a trust boundary, by local Claude with Cloudflare's

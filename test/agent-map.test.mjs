@@ -79,9 +79,9 @@ test('the tool call count reads the whole transcript, also a mark across two 1 M
   assert.equal(toolCalls(file), 2);
 });
 
-test('the heartbeat is on by default, and --no-heartbeat turns it off', () => {
-  assert.equal(optionsOf([]).heartbeat, true);
-  assert.equal(optionsOf(['--no-heartbeat']).heartbeat, false);
+test('the heartbeat is off by default, and --heartbeat turns it on', () => {
+  assert.equal(optionsOf([]).heartbeat, false);
+  assert.equal(optionsOf(['--heartbeat']).heartbeat, true);
 });
 
 test("an agent that another agent started is finished by the end notice in that agent's transcript", () => {

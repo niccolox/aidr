@@ -342,7 +342,7 @@ pre,pre *,code{font-variant-ligatures:none;font-feature-settings:"calt" 0,"liga"
   <div>
    <h2>🧬 The Pydantic models a change touches.</h2>
    <p class="soft">In a Python project, AIDR lists the models in play for each edit: their fields, their links to other models, and the fields the change names. It reads the files with Python's <code>ast</code> module, so no code of your project runs.</p>
-   <p class="soft">In a terminal, AIDR draws the code graphs and the models itself. In a pipe or a file, it writes them as Mermaid text: paste it into a pull request or a document and GitHub draws it. <code>--mermaid</code> shows the text in the terminal too; <code>--no-mermaid</code> leaves it out.</p>
+   <p class="soft">In a terminal, AIDR draws the code graphs and the models itself. In a pipe or a file, it writes them as Mermaid text: paste it into a pull request or a document and GitHub draws it. In the watch, <code>--mermaid</code> adds the text.</p>
    <p class="small"><code>aidr stage HEAD~3..HEAD</code> gives the models and the code graph changes of a commit range: tables and drawings in a terminal, Markdown tables and Mermaid in a file.</p>
   </div>
   <div class="mini"><pre><span class="c90">10:43:40</span>  <span class="c34">shop</span>  🔧 <span class="c36">In process</span> <span class="c90">·</span> <span class="c1">Edit</span>
@@ -447,7 +447,7 @@ Pydantic models: <span class="c93">CartItem</span>.</pre></div></div>
   <h2>💓 A heartbeat for every agent.</h2>
   <div>
    <p class="soft">When Claude Code starts agents of its own, <code>aidr agents</code> draws the map: each session and each agent it started, with its state (running, quiet, stalled, finished or failed), its age, its steps, its last step, and for an agent in a git worktree its commits and open files. The watch prints the map when it starts and every 10 minutes.</p>
-   <p class="soft">🐚 Each shell step shows the command Claude ran under its description, with secrets masked. <code>--no-commands</code> hides them; <code>--no-heartbeat</code> hides the map.</p>
+   <p class="soft">🐚 With <code>--commands</code>, each shell step shows the command Claude ran under its description, with secrets masked. <code>--heartbeat</code> prints the map at the start and every 10 minutes.</p>
    <p class="small">🛰️ These samples are real: a session that ran several agents in parallel on 22 November 2026, captured with <code>capture-real.mjs</code>. Home folders show as <code>~</code>.</p>
   </div>
  </div>
@@ -483,18 +483,22 @@ Pydantic models: <span class="c93">CartItem</span>.</pre></div></div>
   <div class="tablewrap">
    <table>
     <tbody>
-     <tr><td><code>aidr</code></td><td>Each step of the sessions in this folder, and each change with the reason, the code graph, a note and a question</td></tr>
-     <tr><td><code>aidr --changes</code></td><td>Only the significant changes: planned, in process and completed</td></tr>
-     <tr><td><code>aidr --busywork</code></td><td>Everything: every step, each text and prompt in full, and the code view, code graphs, models, change events, progress and stage reports</td></tr>
+     <tr><td><code>aidr</code></td><td>The minimal watch: each step on one line, and each code change as one line with its file and line counts</td></tr>
      <tr><td><code>aidr list</code></td><td>The Claude Code sessions in operation, once</td></tr>
-     <tr><td><code>aidr agents</code></td><td>💓 The agent map: each agent, its state and its heartbeat (the watch prints it every 10 minutes; <code>--no-heartbeat</code> hides it)</td></tr>
-     <tr><td><code>aidr --no-commands</code></td><td>🐚 The shell steps without their command lines (shown by default, secrets masked)</td></tr>
+     <tr><td><code>aidr agents</code></td><td>💓 The agent map: each agent, its state and its heartbeat</td></tr>
      <tr><td><code>aidr stage a..b</code></td><td>The Pydantic models in play and the code graph changes of a commit range</td></tr>
-     <tr><td><code>aidr --global</code></td><td>Every folder, not only this one</td></tr>
-     <tr><td><code>aidr --no-mermaid</code></td><td>Never the Mermaid text (by default it goes to a pipe or a file; <code>--mermaid</code> adds it in a terminal)</td></tr>
-     <tr><td><code>aidr journal [day|week|month|project]</code></td><td>A journal of the folder as Markdown; <code>--date YYYY-MM-DD</code> for another day</td></tr>
-     <tr><td><code>aidr --learn</code></td><td>A Learn card under each change: a memory aid, advice and official links, written by local Claude when the claude CLI is on your PATH, else by Gemma with your own Cloudflare keys</td></tr>
-     <tr><td><code>aidr --security</code></td><td>A Security card under each change at a trust boundary: impact, threat, fix, the NIST SSDF v1.1 practice and a link, written by local Claude with Cloudflare's security-audit skill</td></tr>
+     <tr><td><code>aidr journal [day|week|month|project]</code></td><td>A journal of the folder as Markdown; <code>--date YYYY-MM-DD</code> for another day; <code>--learn --security</code> adds the cards of the day</td></tr>
+     <tr><td><code>--code</code>, <code>--full-diff</code></td><td>The diff of each change with the reason, a note and a question; every changed line</td></tr>
+     <tr><td><code>--map</code>, <code>--ontology</code></td><td>The code graph of each changed function; the Pydantic models of a Python change</td></tr>
+     <tr><td><code>--mermaid</code></td><td>The Mermaid text next to the drawings</td></tr>
+     <tr><td><code>--stage</code>, <code>--progress</code></td><td>The stage report after a commit; the time and last output of long commands</td></tr>
+     <tr><td><code>--heartbeat</code></td><td>💓 The agent map at the start and every 10 minutes</td></tr>
+     <tr><td><code>--commands</code></td><td>🐚 The command lines of each shell step, secrets masked</td></tr>
+     <tr><td><code>--changes</code>, <code>--busywork</code></td><td>The change events (planned, in process, completed); every step and text in full</td></tr>
+     <tr><td><code>--all</code></td><td>Every flag above. The flags add up: <code>aidr --code --map --security</code></td></tr>
+     <tr><td><code>--global</code></td><td>Every folder, not only this one</td></tr>
+     <tr><td><code>--learn</code></td><td>A Learn card under each change: a memory aid, advice and official links, written by local Claude when the claude CLI is on your PATH, else by Gemma with your own Cloudflare keys</td></tr>
+     <tr><td><code>--security</code></td><td>A Security card under each change at a trust boundary: impact, threat, fix, the NIST SSDF v1.1 practice and a link, written by local Claude with Cloudflare's security-audit skill</td></tr>
     </tbody>
    </table>
   </div>

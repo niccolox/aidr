@@ -59,17 +59,36 @@ remove the command, run `npm unlink -g devekko.aidr`.
 
 | Command | What you see |
 | --- | --- |
-| 🧑‍🏫 `aidr` | Each step of the sessions in this folder with its shell command, and each code change with the reason, a note and a question |
-| 🎯 `aidr --changes` | Only the significant changes: planned, in process and completed |
-| 🗂️ `aidr --busywork` | Everything: every step, Claude's text and each prompt in full as formatted Markdown, and the code view, code graphs, models, change events, progress and stage reports of the other views |
+| 🧑‍🏫 `aidr` | The minimal watch: each step of the sessions in this folder on one line, and each code change as one line with its file and line counts |
 | 📋 `aidr list` | The Claude Code sessions in operation, once |
 | 💓 `aidr agents` | The agent map: each session and the subagents it started, running, quiet, stalled, finished or failed, with each one's heartbeat, last step, commits and open files. The watch prints it at the start and every 10 minutes |
 | 🧬 `aidr stage HEAD~3..HEAD` | The Pydantic models in play and the CodeGraph changes of a commit or a range |
-| 🌐 `aidr --global` | Every folder, not only this one |
-| 🧜 `aidr --no-mermaid` | Never the Mermaid text (by default it goes to a pipe or a file; `--mermaid` adds it in a terminal) |
-| 📓 `aidr journal [day\|week\|month\|project]` | A journal of the folder as Markdown: sessions, prompts, changes, commits, tests, files and models; `project` gives the lifecycle. `--date YYYY-MM-DD` for another day |
-| 📚 `aidr --learn` | A Learn card under each code change: a memory aid, one line of advice, a link to the official docs and one tutorial. Local Claude writes it when the `claude` CLI is on your PATH, else Gemma on Workers AI with your own Cloudflare keys |
-| 🛡️ `aidr --security` | A Security card under each change at a trust boundary: the impact, the threat, one fix, the NIST SSDF practice and a link. Local Claude writes it with Cloudflare's security-audit skill |
+| 📓 `aidr journal [day\|week\|month\|project]` | A journal of the folder as Markdown: sessions, prompts, changes, commits, tests, files and models; `project` gives the lifecycle. `--date YYYY-MM-DD` for another day. `aidr journal --learn --security` adds the cards of the day's changes |
+
+### 🎛️ Flags add up
+
+The watch starts minimal. Each flag turns on one view, and you can combine them: `aidr --code --map --security`.
+
+| Flag | What it adds |
+| --- | --- |
+| 🧑‍🏫 `--code` | The diff of each change, with Claude's reason, a note and a question. `--full-diff` shows every changed line |
+| 🗺️ `--map` | The CodeGraph map of each changed function |
+| 🐍 `--ontology` | The Pydantic models that each Python change defines or uses |
+| 🧜 `--mermaid` | The Mermaid text of the maps and models, next to the drawings |
+| 🧬 `--stage` | The stage report after each commit |
+| ⏳ `--progress` | The time and last output line of long tool calls and background commands |
+| 💓 `--heartbeat` | The agent map at the start and every 10 minutes |
+| 🐚 `--commands` | The command lines of each shell step, with secrets masked |
+| 🎯 `--changes` | The change events: planned, in process and completed |
+| 🗂️ `--busywork` | Every step, Claude's text and each prompt in full |
+| 🧰 `--all` | Every flag above |
+| 📚 `--learn` | A Learn card under each code change: a memory aid, one line of advice, a link to the official docs and one tutorial. Local Claude writes it when the `claude` CLI is on your PATH, else Gemma on Workers AI with your own Cloudflare keys |
+| 🛡️ `--security` | A Security card under each change at a trust boundary: the impact, the threat, one fix, the NIST SSDF practice and a link. Local Claude writes it with Cloudflare's security-audit skill |
+| 🌐 `--global` | Every folder, not only this one. `--outside` shows the lines of files outside it |
+
+`--all` leaves out `--learn` and `--security`, because they call a model: name them too, as in `aidr --all --security`.
+A card that does not come says why in one line. The old `--no-*` flags are gone: aidr stops and names the flag
+that now turns the view on.
 
 With [CodeGraph](https://github.com/colbymchenry/codegraph) and a `.codegraph/` index, aidr draws the callers and
 callees of each changed function. With `python3` on the PATH, it lists the Pydantic models that a change touches,
@@ -77,11 +96,8 @@ with their fields and links. Long tool calls and background commands show their 
 
 In a terminal, aidr draws the code graphs and the models itself, with box-drawing characters. In a pipe or a file
 (`aidr stage HEAD > stage.md`), it writes them as Mermaid text (a `flowchart` and a `classDiagram`): paste it into a
-pull request or a document and GitHub draws it. `--mermaid` shows the Mermaid text in the terminal too;
-`--no-mermaid` leaves it out everywhere.
-
-`--no-commands` hides the command lines of the shell steps, and `--no-heartbeat` hides the agent map. Run
-`aidr --help` for all options.
+pull request or a document and GitHub draws it. In the watch, `--mermaid` adds the Mermaid text. Run `aidr --help`
+for all options.
 
 ## 🛰️ From a real session
 

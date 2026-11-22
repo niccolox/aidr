@@ -266,3 +266,60 @@ test('the day journal counts a reply once, adds the agents of a session, and giv
     rmSync(root, { recursive: true, force: true });
   }
 });
+
+// Owner, 22 November 2026: "make aidr security and learn write the card to the journal".
+test('the journal makes the Learn and Security cards of the day again, and counts a dropped card', async () => {
+  const { cardsOf, cardLines } = await import('../lib/journal.mjs');
+  const { SecurityReviewer } = await import('../lib/security.mjs');
+  const { Learner } = await import('../lib/learn.mjs');
+  const sql = { file: '/w/app/search.py', before: [], after: ['rows = db.execute(f"SELECT * FROM t WHERE a = {x}")'] };
+  const model = {
+    file: '/w/app/cart.py',
+    before: [],
+    after: ['class Cart(BaseModel):', '    total: int = Field(ge=0)'],
+  };
+  const outside = { file: '/elsewhere/x.py', before: [], after: ['subprocess.run(c, shell=True)'] };
+  const day = {
+    changes: [sql, model, outside].map((change, i) => ({
+      time: Date.parse('2026-11-22T10:00:00Z') + i * 60_000,
+      cwd: '/w',
+      change,
+    })),
+  };
+  const security = {
+    impact: 'high',
+    threat: 'SQL injection through the term',
+    summary: 'The term now goes into the SQL text, so a caller can read any row of the table.',
+    ssdf: 'PW.5',
+    fix: 'Pass the term as a query parameter.',
+    link: 'https://cwe.mitre.org/data/definitions/89.html',
+  };
+  const learnCard = {
+    mnemonic: 'Type each field, then add its rule',
+    advice: 'Put each rule on the model field, so a bad value fails where it enters.',
+    docs: 'https://docs.pydantic.dev/latest/concepts/fields/',
+    tutorial: 'https://docs.pydantic.dev/latest/concepts/models/',
+  };
+  const answer = card => async () => ({ code: 0, stdout: JSON.stringify({ structured_output: card }) });
+  const at = { now: 0 };
+  const reviewer = new SecurityReviewer({ env: {}, claude: true, runCli: answer(security) });
+  const learner = new Learner({
+    env: {},
+    claude: true,
+    now: () => at.now,
+    runCli: answer({ ...learnCard, docs: 'https://x.example/' }),
+  });
+  const results = await cardsOf(day, { cwd: '/w', learner, reviewer, at });
+  assert.ok(!results.some(r => r.file === outside.file), 'a change outside the folder gets no card');
+  const lines = cardLines(results, '/w').join('\n');
+  assert.match(lines, /## Cards/);
+  assert.match(lines, /### 🛡️ Security · high · SQL injection through the term/);
+  assert.match(lines, /`app\/search\.py` · \d\d:\d\d/);
+  assert.match(lines, /\*\*SSDF:\*\* PW\.5 Create source code/);
+  assert.match(
+    lines,
+    /card(s)? not shown: check\./,
+    'the Learn card with a link off the allowlist is counted, not shown',
+  );
+  assert.deepEqual(cardLines([], '/w'), []);
+});
