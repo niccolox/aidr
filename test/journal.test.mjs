@@ -16,6 +16,7 @@ import {
   renderLifecycle,
   stagesOf,
   startOffset,
+  usageOf,
 } from '../lib/journal.mjs';
 
 const local = (m, d, h, min = 0) => new Date(2026, m - 1, d, h, min);
@@ -204,4 +205,64 @@ test('stages: the last stage of each task wins', () => {
     { time: 4, stage: 'planned', kind: 'task', text: 'b' },
   ]);
   assert.deepEqual([g.done.length, g.planned.length, g.process.length], [1, 1, 0]);
+});
+
+// Owner, 22 November 2026: "aidr record token cost in the journal entries".
+test('the cost of one reply at API list price: cache writes, cache reads, fast mode, and a model with no price', () => {
+  const u = usageOf('claude-opus-5-5', {
+    input_tokens: 1_000_000,
+    output_tokens: 1_000_000,
+    cache_read_input_tokens: 1_000_000,
+    cache_creation_input_tokens: 2_000_000,
+    cache_creation: { ephemeral_5m_input_tokens: 1_000_000, ephemeral_1h_input_tokens: 1_000_000 },
+  });
+  // 4 input + 20 output + 0.20 read + 4 x 1.25 (5 minutes) + 4 x 2 (1 hour) = 37.20
+  assert.equal(u.cost.toFixed(2), '37.20');
+  assert.equal(usageOf('claude-opus-5-5', { output_tokens: 1_000_000, speed: 'fast' }).cost, 40);
+  assert.equal(usageOf('claude-haiku-5-5', { input_tokens: 1_000_000 }).cost, 0.1);
+  assert.equal(usageOf('some-other-model', { input_tokens: 10 }).cost, null);
+});
+
+test('the day journal counts a reply once, adds the agents of a session, and gives tokens and cost', async () => {
+  const root = mkdtempSync(join(tmpdir(), 'aidr-tokens-')),
+    projects = join(root, 'projects'),
+    folderName = '-shop',
+    dir = join(projects, folderName);
+  mkdirSync(join(dir, 'sess-0001', 'subagents'), { recursive: true });
+  const reply = (time, id, usage, sessionId = 'sess-0001-aaaa') =>
+    JSON.stringify({
+      sessionId,
+      type: 'assistant',
+      message: { id, model: 'claude-opus-5-5', usage, content: [{ type: 'text', text: 'ok' }] },
+      timestamp: iso(time),
+    });
+  const usage = { input_tokens: 0, output_tokens: 1_000_000 };
+  // One reply written as two entries (two content blocks) with the same message id: $20 once, not $40.
+  writeFileSync(
+    join(dir, 'sess-0001.jsonl'),
+    [
+      prompt(local(11, 21, 10), 'fix the cart'),
+      reply(local(11, 21, 10, 1), 'msg_1', usage),
+      reply(local(11, 21, 10, 1), 'msg_1', usage),
+      '',
+    ].join('\n'),
+  );
+  // An agent of the session: its brief is not a prompt; its reply adds $20.
+  writeFileSync(
+    join(dir, 'sess-0001', 'subagents', 'agent-a1.jsonl'),
+    [prompt(local(11, 21, 10, 2), 'the agent brief'), reply(local(11, 21, 10, 3), 'msg_2', usage), ''].join('\n'),
+  );
+  try {
+    const j = await collect({ cwd: root, period: 'day', date: local(11, 21, 12), projects, folderName, git: () => '' });
+    const day = j.days.get('2026-11-21');
+    assert.equal(day.prompts.length, 1, 'the agent brief is not a prompt');
+    const text = renderJournal(j).join('\n');
+    assert.match(text, /2\.0 M tokens · \$40\.00\*\*/);
+    assert.match(text, /`sess-000` · .* · 1\.0 M tokens · \$20\.00/);
+    assert.match(text, /\| `claude-opus-5-5` \| 0 \| 0 \| 0 \| 2\.0 M \| \$40\.00 \|/);
+    assert.match(text, /Agents started by the sessions: 1\.0 M tokens, \$20\.00\./);
+    assert.match(text, /Cost at API list price/);
+  } finally {
+    rmSync(root, { recursive: true, force: true });
+  }
 });

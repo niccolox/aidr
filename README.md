@@ -145,6 +145,10 @@ Pydantic models that changed most. `aidr journal week` and `aidr journal month` 
 `aidr journal project` gives the lifecycle: one row for each month, the tags, the first and last change of each top
 folder, and the open tasks. It prints Markdown and writes no file, so `aidr journal week > week.md` keeps it.
 
+💰 Each day and each session also show their tokens and their cost at API list price, one row for each model, with
+the tokens of the agents that a session started (they write their own transcripts). A reply that Claude Code writes as
+several transcript entries counts once. A Claude Code subscription is billed differently.
+
 ## 📚 Learn cards (`--learn`)
 
 `aidr --learn` adds one card under a code change: a memory aid, one line of advice, and links to the official docs and
