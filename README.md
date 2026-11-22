@@ -65,6 +65,7 @@ remove the command, run `npm unlink -g devekko.aidr`.
 | `aidr stage HEAD~3..HEAD` | The Pydantic models in play and the CodeGraph changes of a commit or a range |
 | `aidr --global` | Every folder, not only this one |
 | `aidr --no-mermaid` | No Mermaid text under the code graphs and the models |
+| `aidr --learn` | A Learn card under each code change: a memory aid, one line of advice, a link to the official docs and one tutorial. Gemma writes it on Workers AI with your own Cloudflare keys |
 
 With [CodeGraph](https://github.com/colbymchenry/codegraph) and a `.codegraph/` index, aidr draws the callers and
 callees of each changed function. With `python3` on the PATH, it lists the Pydantic models that a change touches,
@@ -81,24 +82,36 @@ aidr reads three things: your own processes, the Claude Code transcripts under `
 `$CLAUDE_CONFIG_DIR/projects`), and `git` in each session's folder. It reads Python models with Python's `ast` module,
 so no code of your project runs.
 
-- It writes no file, opens no network connection, sends no telemetry and starts no server.
+- It writes no file, sends no telemetry and starts no server. It opens no network connection, except with `--learn`
+  (below). A test checks the source for network and write calls.
 - It never shows a private file: `.env` files, SSH keys, cloud and Claude credentials, `*.tfvars` and more. Add your
   own globs, one on each line, to `~/.config/devekko.aidr/private`.
 - It masks tokens, keys, passwords and URL passwords in every line it prints.
 - It removes terminal control bytes, so a file or a prompt cannot write to your clipboard or change your screen.
 
-The package is under 3,000 lines of JavaScript and Python, formatted with Biome, with no dependencies and no install script. Read
+The package is about 3,300 lines of JavaScript and Python, formatted with Biome, with no dependencies and no install script. Read
 [lib/](lib/) before you run it.
+
+## Learn cards (`--learn`)
+
+`aidr --learn` adds one card under a code change: a memory aid, one line of advice, and links to the official docs and
+one tutorial. Gemma (`@cf/google/gemma-4-26b-a4b-it` on Workers AI) writes each card. aidr checks each card before it
+prints it: the links must be on a list of official sites (docs.python.org, docs.pydantic.dev, nodejs.org,
+developer.mozilla.org and more), and a card that fails the check does not show. There is at most one card for each
+change, the same card at most once in 30 minutes, and at most 30 calls an hour.
 
 ## Requirements
 
 - Node 20 or later, and `git`.
-- Optional: `python3` (Pydantic models), `codegraph` (the code graph).
+- Optional: `python3` (Pydantic models), `codegraph` (the code graph), and for `--learn` a Cloudflare account with
+  Workers AI: set `AIDR_CF_ACCOUNT_ID` and `AIDR_CF_API_TOKEN`. aidr never prints them.
 - Linux or macOS.
 
 ## Questions
 
-**Does it send my code anywhere?** No. aidr opens no network connection. The tests check this.
+**Does it send my code anywhere?** No. Without `--learn`, aidr opens no network connection. With `--learn`, it sends
+the kind of change, the language and the names of the changed function and models to Workers AI, with your own key.
+It sends the changed lines only with `--learn-code`, with secrets masked, and never a private file.
 
 **Does it change my files or my sessions?** No. It only reads transcripts and runs read-only `git` commands.
 

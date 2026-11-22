@@ -269,17 +269,29 @@ test('the raw log (aidr:busywork) keeps the whole text as filtered lines', () =>
   assert.deepEqual(long.body, ['…']);
 });
 
-test('no module opens a network connection or writes a file (the README claim)', () => {
+test('no module opens a network connection or writes a file, except learn.mjs, which only calls Workers AI', () => {
   const here = import.meta.dirname,
     dir = existsSync(join(here, 'code-tutor.mjs')) ? here : join(here, '..', 'lib');
   const sources = readdirSync(dir).filter(f => /\.(mjs|py)$/.test(f) && !f.endsWith('.test.mjs') && f !== 'pack.mjs');
-  assert.ok(sources.length >= 8, 'the modules are found');
+  assert.ok(sources.length >= 9, 'the modules are found');
   const net =
     /node:(?:net|http|https|http2|dgram|tls|dns)\b|\bfetch\(|\bWebSocket\b|\bimport (?:socket|urllib|http|requests)\b/;
   const write = /\b(?:writeFile|appendFile|createWriteStream|mkdir|rmSync|unlink|rename)\w*\(|open\([^)]*['"][wax]/;
   for (const f of sources) {
     const text = readFileSync(join(dir, f), 'utf8');
-    assert.doesNotMatch(text, net, f + ' uses the network');
     assert.doesNotMatch(text, write, f + ' writes a file');
+    if (f !== 'learn.mjs') assert.doesNotMatch(text, net, f + ' uses the network');
   }
+  // --learn (spec 9.9) is the one exception: one fetch, to the Workers AI API, and only when the person asks for it.
+  const learn = readFileSync(join(dir, 'learn.mjs'), 'utf8');
+  assert.equal((learn.match(/\bthis\.fetch\(/g) || []).length, 1);
+  assert.deepEqual(
+    [...new Set(learn.match(/https?:\/\/[a-z0-9.-]+/gi))].filter(
+      h =>
+        !/docs\.|nodejs\.org|developer\.mozilla|hono\.dev|postgresql|cheatsheetseries|playwright\.dev|git-scm/.test(h),
+    ),
+    ['https://api.cloudflare.com'],
+  );
+  const aidr = readFileSync(join(dir, 'aidr.mjs'), 'utf8');
+  assert.match(aidr, /options\.learn \? new Learner/, 'the watch makes a learner only with --learn');
 });

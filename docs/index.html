@@ -4,7 +4,7 @@
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <title>AIDR: stream your agent's changes, code graphs, busywork and learnings</title>
-<meta name="description" content="AIDR is a CLI that runs next to Claude Code and streams each change with Claude's reason, the code graph it touches, the raw log and a question to check yourself. Read only, no network, AGPL-3.0.">
+<meta name="description" content="AIDR is a CLI that runs next to Claude Code and streams each change with Claude's reason, the code graph it touches, the raw log and a question to check yourself. Read only, offline unless you ask for learn cards, AGPL-3.0.">
 <meta name="theme-color" content="#0f1014">
 <link rel="icon" href="logo.svg" type="image/svg+xml">
 <link rel="preload" href="fonts/bricolage-grotesque.woff2" as="font" type="font/woff2" crossorigin>
@@ -184,7 +184,7 @@ pre,pre *,code{font-variant-ligatures:none;font-feature-settings:"calt" 0,"liga"
     <a class="btn main" href="#install">Install from source</a>
     <a class="btn alt" href="https://github.com/niccolox/aidr/tree/main/lib">Read the code</a>
    </div>
-   <ul class="facts"><li>Read only</li><li>No network</li><li>No dependencies</li><li>Linux, macOS</li></ul>
+   <ul class="facts"><li>Read only</li><li>Offline by default</li><li>No dependencies</li><li>Linux, macOS</li></ul>
   </div>
  </div>
 
@@ -265,7 +265,7 @@ pre,pre *,code{font-variant-ligatures:none;font-feature-settings:"calt" 0,"liga"
    <p class="note"><b>Busywork:</b> the raw log. Every prompt, tool call and text of Claude in full, as formatted Markdown.</p>
   </div>
   <div class="panel" role="tabpanel" id="p-learnings" aria-labelledby="t-learnings" hidden>
-   <p class="cmd"><b>$</b> aidr</p>
+   <p class="cmd"><b>$</b> aidr --learn</p>
 <pre><span class="c90">10:43:05</span>  <span class="c34">shop</span>  🔧 <span class="c36">In process</span> <span class="c90">·</span> <span class="c1">Edit</span>
   🆕 <span class="c1">tests/test_cart.py</span>  <span class="c32">+7</span> <span class="c31">-0</span>
   <span class="c90">│</span> <span class="c35">💭 Why: </span><span class="c35">No test covered two of the same item.</span>
@@ -279,8 +279,13 @@ pre,pre *,code{font-variant-ligatures:none;font-feature-settings:"calt" 0,"liga"
   <span class="c90">│</span> <span class="c36">📘 A test. It states what the code must do: read the assert lines first, they are the rule.</span>
   <span class="c90">│</span> <span class="c36">📘 A new Python file of 7 lines. Read its first comment: it says what the file is for.</span>
   <span class="c90">│</span> <span class="c36">📘 Adds or changes `test_two_mugs`: a named piece that other code can call.</span>
-  <span class="c90">│</span> <span class="c33">❓ Check yourself: Which behaviour does this test protect, and what would break it?</span></pre>
-   <p class="note"><b>Learnings:</b> a note on how to read each change and one question to answer in your own words. Next: <code>aidr --learn</code> cards with links to the official docs.</p>
+  <span class="c90">│</span> <span class="c33">❓ Check yourself: Which behaviour does this test protect, and what would break it?</span>
+  <span class="c90">│</span> <span class="c36">📚 Learn</span> <span class="c90">· a test assertion · tests/test_cart.py</span>
+  <span class="c90">│</span>    <span class="c1">AAA · Arrange the input, Act once, Assert one result</span>
+  <span class="c90">│</span>    A test states one rule: build the input, run the code once, then check one result, so a failure names the rule.
+  <span class="c90">│</span>    <span class="c90">Docs:    </span> https://docs.python.org/3/reference/simple_stmts.html#the-assert-statement
+  <span class="c90">│</span>    <span class="c90">Tutorial:</span> https://docs.python.org/3/library/unittest.html#basic-example</pre>
+   <p class="note"><b>Learnings:</b> a note on how to read each change, one question to answer in your own words, and with <code>aidr --learn</code> a card with a memory aid and links to the official docs. Gemma writes each card for your change; the card above is an example.</p>
   </div>
   </div>
  </div>
@@ -384,6 +389,7 @@ pre,pre *,code{font-variant-ligatures:none;font-feature-settings:"calt" 0,"liga"
      <tr><td><code>aidr stage a..b</code></td><td>The Pydantic models in play and the code graph changes of a commit range</td></tr>
      <tr><td><code>aidr --global</code></td><td>Every folder, not only this one</td></tr>
      <tr><td><code>aidr --no-mermaid</code></td><td>No Mermaid text under the code graphs and the models</td></tr>
+     <tr><td><code>aidr --learn</code></td><td>A Learn card under each change: a memory aid, advice and official links, written by Gemma with your own Cloudflare keys</td></tr>
     </tbody>
    </table>
   </div>
@@ -393,7 +399,7 @@ pre,pre *,code{font-variant-ligatures:none;font-feature-settings:"calt" 0,"liga"
 <section id="privacy">
  <div class="wrap">
   <h2>It reads. It writes nothing.</h2>
-  <p class="soft measure">The package is under 3,000 lines of JavaScript and Python, formatted with Biome, with no dependencies and no install script. <a href="https://github.com/niccolox/aidr/tree/main/lib">Read it</a> before you run it.</p>
+  <p class="soft measure">The package is about 3,300 lines of JavaScript and Python, formatted with Biome, with no dependencies and no install script. <a href="https://github.com/niccolox/aidr/tree/main/lib">Read it</a> before you run it.</p>
   <div class="ledger">
    <div class="yes">
     <h3>Reads</h3>
@@ -407,7 +413,7 @@ pre,pre *,code{font-variant-ligatures:none;font-feature-settings:"calt" 0,"liga"
    <div class="no">
     <h3>Never</h3>
     <ul>
-     <li><b>Writes a file, opens a network connection</b> or sends telemetry. A test checks the source for both.</li>
+     <li><b>Writes a file</b> or sends telemetry. It opens no network connection unless you run <code>--learn</code>. A test checks the source for both.</li>
      <li><b>Shows a private file:</b> <code>.env</code>, SSH keys, cloud and Claude credentials, <code>*.tfvars</code>, and your own globs.</li>
      <li><b>Prints a secret:</b> tokens, keys, passwords and URL passwords are masked on every line.</li>
      <li><b>Passes control bytes</b> to your terminal, so a file cannot write to your clipboard.</li>
@@ -421,7 +427,7 @@ pre,pre *,code{font-variant-ligatures:none;font-feature-settings:"calt" 0,"liga"
  <div class="wrap">
   <h2>Questions</h2>
   <dl class="faq">
-   <div><dt>Does it send my code anywhere?</dt><dd>No. AIDR opens no network connection.</dd></div>
+   <div><dt>Does it send my code anywhere?</dt><dd>No. Without <code>--learn</code>, AIDR opens no network connection. With it, AIDR sends the kind of change and the names of the changed function and models to Workers AI with your own key. The changed lines go only with <code>--learn-code</code>, with secrets masked.</dd></div>
    <div><dt>Does it change my files or my sessions?</dt><dd>No. It reads transcripts and runs read-only <code>git</code> commands.</dd></div>
    <div><dt>Does it work with other coding agents?</dt><dd>Not now. It reads the transcript format of Claude Code.</dd></div>
    <div><dt>What do I need?</dt><dd>Node 20 or later and <code>git</code>, on Linux or macOS. <code>python3</code> and <code>codegraph</code> are optional.</dd></div>
