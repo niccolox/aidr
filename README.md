@@ -13,12 +13,14 @@
   AGPL-3.0-only · version 0.1.0
 </p>
 
-aidr runs in a second terminal next to Claude Code. For each edit, it shows the diff, the reason Claude gave, a note
-on what to check, and one question to answer before you go on. It shows each shell command Claude runs, and a map
-of every agent with its heartbeat. It reads; it writes nothing. 🔒
+aidr runs in a second terminal next to Claude Code. It starts minimal: each step on one line, and each code change
+as one line with its file and line counts. Add a flag for each view you want, and the flags add up: the diff with the
+reason Claude gave (`--code`), the code graph (`--map`), the shell commands (`--commands`), a map of every agent with
+its heartbeat (`--agents`), and Learn and Security cards (`--learn`, `--security`). It reads; it writes nothing. 🔒
 
 ```text
-10:42:07  shop  🔧 In process · Edit
+$ aidr --code
+10:42:07  shop  📝 Edit | app/cart.py
   ✏️  app/cart.py  +1 -1
   │ 💭 Why: The total ignored the quantity, so two mugs cost the price of one.
   │   def total(items):
@@ -129,7 +131,7 @@ The agent map (`aidr agents`):
     └ finished R1 Prefect directory-agent flow  age 12.5 h, 152 steps, heartbeat 11.4 h ago
 ```
 
-Shell steps with their commands (`aidr`):
+Shell steps with their commands (`aidr --commands`):
 
 ```text
 10:07:22  saasx2x.ontology  Bash | Read the site page sections and the sample layout
@@ -208,8 +210,24 @@ that the change touches, and a link to OWASP, CWE, NIST, CISA or the Cloudflare 
   link on the allowlist. A card that fails does not show. At most one card for each file, function and domain, and
   at most 30 calls an hour.
 
+`aidr journal --security` makes the cards of the day's changes again, in a Cards part of the journal.
+
 A Security card is a first read, not an audit. Medium and high cards need a reachable path in the lines; when the lines
 do not show it, the card says what to check.
+
+## ❓ Help
+
+`aidr --help` lists every command and flag on one line each. Add `--help`, `--explain` or `--example` after any flag
+or command to read about that part: one line, two paragraphs, or what it prints.
+
+```text
+$ aidr --security --help
+aidr --security: adds a Security card under each change at a trust boundary: impact, threat, fix, NIST SSDF practice, link.
+More: aidr --security --explain, aidr --security --example.
+```
+
+`aidr --explain` and `aidr --example` do the same for aidr itself. With npm, put `--` first, because npm keeps
+`--help` for itself: `npm run aidr -- --security --explain`.
 
 ## ⚙️ Requirements
 
@@ -221,8 +239,9 @@ do not show it, the card says what to check.
 
 ## ❓ Questions
 
-**Does it send my code anywhere?** No. Without `--learn`, aidr opens no network connection. With `--learn`, it sends
-the kind of change, the language and the names of the changed function and models to Workers AI, with your own key.
+**Does it send my code anywhere?** No, unless you ask for cards. Without `--learn` or `--security`, aidr opens no
+network connection and starts no model. With `--learn`, it sends the kind of change, the language and the names of the
+changed function and models to your local `claude` CLI, or to Workers AI with your own key.
 It sends the changed lines only with `--learn-code`, with secrets masked, and never a private file. With
 `--security`, it sends the relative path and the changed lines, with secrets masked, to your local `claude` CLI.
 

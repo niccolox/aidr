@@ -172,7 +172,7 @@ pre,pre *,code{font-variant-ligatures:none;font-feature-settings:"calt" 0,"liga"
 <body>
 <header class="wrap top">
  <img src="logo.svg" alt="" width="30" height="30"><span class="name">AIDR</span>
- <nav><a class="opt" href="#how">How it works</a><a class="opt" href="#agents">Agents</a><a class="opt" href="#privacy">Privacy</a><a href="https://github.com/niccolox/aidr">GitHub</a></nav>
+ <nav><a class="opt" href="#how">How it works</a><a class="opt" href="#agents">Agents</a><a class="opt" href="#help">Help</a><a class="opt" href="#privacy">Privacy</a><a href="https://github.com/niccolox/aidr">GitHub</a></nav>
 </header>
 
 <main>
@@ -180,7 +180,7 @@ pre,pre *,code{font-variant-ligatures:none;font-feature-settings:"calt" 0,"liga"
  <div class="hero-head">
   <div>
    <h1>AIDR</h1>
-   <p class="tagline">A CLI that streams your agent's <a class="k" href="#views" data-tab="changes">changes</a>, <a class="k" href="#views" data-tab="graph">code graphs</a>, <a class="k" href="#views" data-tab="busywork">busywork</a> and <a class="k" href="#views" data-tab="learnings">learnings</a>.</p>
+   <p class="tagline">A CLI that streams your agent's <a class="k" href="#views" data-tab="changes">changes</a>, <a class="k" href="#views" data-tab="graph">code graphs</a>, <a class="k" href="#views" data-tab="busywork">busywork</a>, <a class="k" href="#views" data-tab="learnings">learnings</a> and <a class="k" href="#views" data-tab="security">security</a>.</p>
   </div>
   <div>
    <p class="lead">Run it in a second terminal next to Claude Code. Each edit arrives with the reason Claude gave, the code it touches, and one question to answer before you accept the next one.</p>
@@ -195,18 +195,32 @@ pre,pre *,code{font-variant-ligatures:none;font-feature-settings:"calt" 0,"liga"
  <div class="term" id="views">
   <div class="tabs" role="tablist" aria-label="AIDR views">
    <span class="dots" aria-hidden="true"><i></i><i></i><i></i></span>
-   <button class="tab" role="tab" id="t-changes" aria-controls="p-changes" aria-selected="true">Changes</button>
+   <button class="tab" role="tab" id="t-watch" aria-controls="p-watch" aria-selected="true">Watch</button>
+   <button class="tab" role="tab" id="t-changes" aria-controls="p-changes" aria-selected="false" tabindex="-1">Changes</button>
    <button class="tab" role="tab" id="t-graph" aria-controls="p-graph" aria-selected="false" tabindex="-1">Code graphs</button>
    <button class="tab" role="tab" id="t-busywork" aria-controls="p-busywork" aria-selected="false" tabindex="-1">Busywork</button>
    <button class="tab" role="tab" id="t-learnings" aria-controls="p-learnings" aria-selected="false" tabindex="-1">Learnings</button>
+   <button class="tab" role="tab" id="t-security" aria-controls="p-security" aria-selected="false" tabindex="-1">Security</button>
   </div>
   <div class="screens">
-  <div class="panel" role="tabpanel" id="p-changes" aria-labelledby="t-changes">
-   <p class="cmd"><b>$</b> aidr --changes</p>
-<pre><span class="c90">10:41:02</span>  <span class="c34">shop</span>  🗺️  <span class="c35">Planned</span> <span class="c90">·</span> <span class="c1">Plan</span> <span class="c90">|</span> Fix the cart total
+  <div class="panel" role="tabpanel" id="p-watch" aria-labelledby="t-watch">
+   <p class="cmd"><b>$</b> aidr</p>
+<pre><span class="c90">10:40:51</span>  <span class="c34">shop</span>  🙋 <span class="c1">PROMPT</span> <span class="c90">|</span> <span class="c35">The cart total is wrong when I buy two mugs.</span>
+<span class="c90">10:40:58</span>  <span class="c34">shop</span>  📖 <span class="c36">Read</span> <span class="c90">|</span> app/cart.py
+<span class="c90">10:42:07</span>  <span class="c34">shop</span>  📝 <span class="c36">Edit</span> <span class="c90">|</span> app/cart.py
+  <span class="c90">│</span> ✏️ <span class="c1">app/cart.py</span> <span class="c32">+2</span> <span class="c31">−2</span>
+<span class="c90">10:43:05</span>  <span class="c34">shop</span>  💾 <span class="c36">Write</span> <span class="c90">|</span> tests/test_cart.py
+  <span class="c90">│</span> ✏️ <span class="c1">tests/test_cart.py</span> <span class="c32">+7</span> <span class="c31">−0</span>
+<span class="c90">10:43:12</span>  <span class="c34">shop</span>  🧪 <span class="c36">Bash</span> <span class="c90">|</span> Run the cart tests</pre>
+   <p class="note"><b>Watch:</b> with no flag, each step is one line and each code change is one line with its file and line counts. Each flag adds one view, and the flags add up: <code>aidr --code --map --security</code>.</p>
+  </div>
+  <div class="panel" role="tabpanel" id="p-changes" aria-labelledby="t-changes" hidden>
+   <p class="cmd"><b>$</b> aidr --code --changes</p>
+<pre><span class="c90">10:40:51</span>  <span class="c34">shop</span>  🙋 <span class="c1">PROMPT</span> <span class="c90">|</span> <span class="c35">The cart total is wrong when I buy two mugs.</span>
+<span class="c90">10:41:02</span>  <span class="c34">shop</span>  🗺️  <span class="c35">Planned</span> <span class="c90">·</span> <span class="c1">Plan</span> <span class="c90">|</span> Fix the cart total
   <span class="c90">│</span> 1. Multiply each price by its quantity
   <span class="c90">│</span> 2. Add a test for two of the same item
-<span class="c90">10:42:07</span>  <span class="c34">shop</span>  🔧 <span class="c36">In process</span> <span class="c90">·</span> <span class="c1">Edit</span>
+<span class="c90">10:42:07</span>  <span class="c34">shop</span>  📝 <span class="c36">Edit</span> <span class="c90">|</span> app/cart.py
   ✏️  <span class="c1">app/cart.py</span>  <span class="c32">+1</span> <span class="c31">-1</span>
   <span class="c90">│</span> <span class="c35">💭 Why: </span><span class="c35">The total ignored the quantity, so two mugs cost the price of one.</span>
   <span class="c90">│</span>   <span class="c95">def</span> <span class="c1 c94">total</span>(items):
@@ -218,8 +232,8 @@ pre,pre *,code{font-variant-ligatures:none;font-feature-settings:"calt" 0,"liga"
    <p class="note"><b>Changes:</b> what Claude planned, what is in process, and what is complete, with the reason for each edit.</p>
   </div>
   <div class="panel" role="tabpanel" id="p-graph" aria-labelledby="t-graph" hidden>
-   <p class="cmd"><b>$</b> aidr</p>
-<pre><span class="c90">10:42:07</span>  <span class="c34">shop</span>  🔧 <span class="c36">In process</span> <span class="c90">·</span> <span class="c1">Edit</span>
+   <p class="cmd"><b>$</b> aidr --code --map</p>
+<pre><span class="c90">10:42:07</span>  <span class="c34">shop</span>  📝 <span class="c36">Edit</span> <span class="c90">|</span> app/cart.py
   ✏️  <span class="c1">app/cart.py</span>  <span class="c32">+1</span> <span class="c31">-1</span>
   <span class="c90">│</span> <span class="c34">🕸 Map of `total`</span> <span class="c90">(CodeGraph, app/cart.py:12)</span>
   <span class="c90">│</span>    <span class="c94">     checkout</span><span class="c90"> ──┐</span>
@@ -266,11 +280,11 @@ pre,pre *,code{font-variant-ligatures:none;font-feature-settings:"calt" 0,"liga"
            <span class="c33">│</span> 
            <span class="c33">│</span> I will multiply by the quantity, then add a test.
 <span class="c90">10:43:12</span>  <span class="c34">shop</span> <span class="c33">▌A</span>  🧪 <span class="c36">Bash</span> <span class="c90">|</span> Run the cart tests</pre>
-   <p class="note"><b>Busywork:</b> everything. Every prompt, tool call and text of Claude in full, as formatted Markdown, and with them the code view, the code graphs, the models, the change events and the stage reports of the other tabs.</p>
+   <p class="note"><b>Busywork:</b> every prompt, tool call and text of Claude in full, as formatted Markdown. Add <code>--all</code> for every view of the other tabs too.</p>
   </div>
   <div class="panel" role="tabpanel" id="p-learnings" aria-labelledby="t-learnings" hidden>
-   <p class="cmd"><b>$</b> aidr --learn</p>
-<pre><span class="c90">10:43:05</span>  <span class="c34">shop</span>  🔧 <span class="c36">In process</span> <span class="c90">·</span> <span class="c1">Edit</span>
+   <p class="cmd"><b>$</b> aidr --code --learn</p>
+<pre><span class="c90">10:43:05</span>  <span class="c34">shop</span>  💾 <span class="c36">Write</span> <span class="c90">|</span> tests/test_cart.py
   🆕 <span class="c1">tests/test_cart.py</span>  <span class="c32">+7</span> <span class="c31">-0</span>
   <span class="c90">│</span> <span class="c35">💭 Why: </span><span class="c35">No test covered two of the same item.</span>
   <span class="c90">│</span> <span class="c1"><span class="c32">+</span></span> <span class="c95">from</span> app.cart <span class="c95">import</span> total
@@ -289,7 +303,21 @@ pre,pre *,code{font-variant-ligatures:none;font-feature-settings:"calt" 0,"liga"
   <span class="c90">│</span>    A test states one rule: build the input, run the code once, then check one result, so a failure names the rule.
   <span class="c90">│</span>    <span class="c90">Docs:    </span> https://docs.python.org/3/reference/simple_stmts.html#the-assert-statement
   <span class="c90">│</span>    <span class="c90">Tutorial:</span> https://docs.python.org/3/library/unittest.html#basic-example</pre>
-   <p class="note"><b>Learnings:</b> a note on how to read each change, one question to answer in your own words, and with <code>aidr --learn</code> a card with a memory aid and links to the official docs. Gemma writes each card for your change; the card above is an example.</p>
+   <p class="note"><b>Learnings:</b> a note on how to read each change, one question to answer in your own words, and with <code>--learn</code> a card with a memory aid and links to the official docs. Local Claude writes each card for your change (Gemma on Workers AI without the claude CLI); the card above is an example.</p>
+  </div>
+  <div class="panel" role="tabpanel" id="p-security" aria-labelledby="t-security" hidden>
+   <p class="cmd"><b>$</b> aidr --code --security</p>
+<pre><span class="c90">10:45:20</span>  <span class="c34">shop</span>  📝 <span class="c36">Edit</span> <span class="c90">|</span> app/search.py
+  ✏️  <span class="c1">app/search.py</span>  <span class="c32">+1</span> <span class="c31">-1</span>
+  <span class="c90">│</span> <span class="c35">💭 Why: </span><span class="c35">Search by the exact product name.</span>
+  <span class="c90">│</span> <span class="c31">-     rows = db.execute(&quot;SELECT * FROM products WHERE name = %s&quot;, (term,))</span>
+  <span class="c90">│</span> <span class="c1"><span class="c32">+</span></span>     rows = db.<span class="c94">execute</span>(<span class="c93">f&quot;SELECT * FROM products WHERE name = '{term}'&quot;</span>)
+  <span class="c90">│</span> <span class="c31">🛡️ Security · high</span> <span class="c1">SQL injection through the search term</span> <span class="c90">· data access and tenant scope · app/search.py</span>
+  <span class="c90">│</span>    The search term now goes into the SQL text, so a visitor can add quotes and read other rows.
+  <span class="c90">│</span>    <span class="c90">Fix: </span> Pass the term as a query parameter again, and add a test with a quote in the term.
+  <span class="c90">│</span>    <span class="c90">SSDF:</span> PW.5 Create source code by adhering to secure coding practices
+  <span class="c90">│</span>    <span class="c90">Link:</span> https://cheatsheetseries.owasp.org/cheatsheets/SQL_Injection_Prevention_Cheat_Sheet.html</pre>
+   <p class="note"><b>Security:</b> for a change at a trust boundary, local Claude reads the lines with the discipline of Cloudflare's security-audit skill and gives the impact, the threat, one fix, a practice of the <a href="https://csrc.nist.gov/pubs/sp/800/218/final">NIST Secure Software Development Framework</a> and a link. aidr checks each card before it prints it; the card above is an example.</p>
   </div>
   </div>
  </div>
@@ -345,7 +373,7 @@ pre,pre *,code{font-variant-ligatures:none;font-feature-settings:"calt" 0,"liga"
    <p class="soft">In a terminal, AIDR draws the code graphs and the models itself. In a pipe or a file, it writes them as Mermaid text: paste it into a pull request or a document and GitHub draws it. In the watch, <code>--mermaid</code> adds the text.</p>
    <p class="small"><code>aidr stage HEAD~3..HEAD</code> gives the models and the code graph changes of a commit range: tables and drawings in a terminal, Markdown tables and Mermaid in a file.</p>
   </div>
-  <div class="mini"><pre><span class="c90">10:43:40</span>  <span class="c34">shop</span>  🔧 <span class="c36">In process</span> <span class="c90">·</span> <span class="c1">Edit</span>
+  <div class="mini"><pre><span class="c90">10:43:40</span>  <span class="c34">shop</span>  📝 <span class="c36">Edit</span> <span class="c90">|</span> app/models.py
   ✏️  <span class="c1">app/models.py</span>  <span class="c32">+1</span> <span class="c31">-0</span>
   <span class="c90">│</span> <span class="c35">💭 Why: </span><span class="c35">The total needs a quantity on each line.</span>
   <span class="c90">│</span>       price: <span class="c96">Decimal</span>
@@ -469,12 +497,33 @@ Pydantic models: <span class="c93">CartItem</span>.</pre></div></div>
     ├ finished Hono JSX pilot on capital research  age 11.9 h, 183 steps, heartbeat 11.5 h ago
     ├ finished Directory UX overlap A3 A4 phase 4  age 12.4 h, 375 steps, heartbeat 11.2 h ago
     └ finished R1 Prefect directory-agent flow  age 12.5 h, 152 steps, heartbeat 11.4 h ago</pre></div></div>
- <div class="wrap"><div class="mini journal-term"><p class="cmd"><b>$</b> aidr</p><pre>10:07:22  saasx2x.ontology  Bash | Read the site page sections and the sample layout
+ <div class="wrap"><div class="mini journal-term"><p class="cmd"><b>$</b> aidr --commands</p><pre>10:07:22  saasx2x.ontology  Bash | Read the site page sections and the sample layout
     $ cd ~/Projects/saasx2x.ontology; grep -n "&lt;section\|&lt;h2\|&lt;nav\|href=\"#" tools/aidr/site/index.html | cut -c1-17…
 10:07:25  saasx2x.ontology  Bash | Read the journal and commands sections of the page
     $ cd ~/Projects/saasx2x.ontology; sed -n 288,301p tools/aidr/site/index.html | cut -c1-260; sed -n 302,322p tools…
 10:07:44  saasx2x.ontology  Bash | Read the second capture result
     $ sleep 1; cat &lt;tmp&gt; 2&gt;/dev/null; sed -n '/# commands/,$p' ~/Projects/saasx2x.ontology/tools/aidr/site/real-strea…</pre></div></div>
+</section>
+
+<section id="help">
+ <div class="wrap split">
+  <h2>❓ Help for each flag.</h2>
+  <div>
+   <p class="soft"><code>aidr --help</code> lists every command and flag on one line each. Add <code>--help</code>, <code>--explain</code> or <code>--example</code> after any flag or command to read about that part: one line, two paragraphs, or what it prints.</p>
+   <p class="small"><code>aidr --explain</code> and <code>aidr --example</code> do the same for aidr itself. With npm, put <code>--</code> first: <code>npm run aidr -- --security --explain</code>.</p>
+  </div>
+ </div>
+ <div class="wrap"><div class="mini journal-term"><pre><span class="c90">$ aidr --security --help</span>
+aidr --security: adds a Security card under each change at a trust boundary: impact, threat, fix, NIST SSDF practice, link.
+More: aidr --security --explain, aidr --security --example.
+
+<span class="c90">$ aidr --security --example</span>
+$ aidr --security
+  │ 🛡️ Security · high SQL injection through the search term · data access and tenant scope · app/search.py
+  │    The search term is now pasted into the SQL string instead of bound as a parameter.
+  │    Fix:  Restore the bound parameter, and add a test with a quote in the term.
+  │    SSDF: PW.5 Create source code by adhering to secure coding practices
+  │    Link: https://cheatsheetseries.owasp.org/cheatsheets/SQL_Injection_Prevention_Cheat_Sheet.html</pre></div></div>
 </section>
 
 <section id="commands">
@@ -536,7 +585,7 @@ Pydantic models: <span class="c93">CartItem</span>.</pre></div></div>
  <div class="wrap">
   <h2>❓ Questions</h2>
   <dl class="faq">
-   <div><dt>Does it send my code anywhere?</dt><dd>No. Without <code>--learn</code>, AIDR opens no network connection. With it, AIDR sends the kind of change and the names of the changed function and models to Workers AI with your own key. The changed lines go only with <code>--learn-code</code>, with secrets masked.</dd></div>
+   <div><dt>Does it send my code anywhere?</dt><dd>No, unless you ask for cards. Without <code>--learn</code> or <code>--security</code>, AIDR opens no network connection and starts no model. <code>--learn</code> sends the kind of change and the names of the changed function and models to your local <code>claude</code> CLI, or to Workers AI with your own key; the changed lines go only with <code>--learn-code</code>. <code>--security</code> sends the relative path and the changed lines to your local <code>claude</code> CLI. Secrets are masked first, and a private file is never sent.</dd></div>
    <div><dt>Does it change my files or my sessions?</dt><dd>No. It reads transcripts and runs read-only <code>git</code> commands.</dd></div>
    <div><dt>Does it work with other coding agents?</dt><dd>Not now. It reads the transcript format of Claude Code.</dd></div>
    <div><dt>What do I need?</dt><dd>Node 20 or later and <code>git</code>, on Linux or macOS. <code>python3</code> and <code>codegraph</code> are optional.</dd></div>
