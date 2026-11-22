@@ -3,218 +3,470 @@
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
-<title>aidr: see what Claude Code changed, and why</title>
-<meta name="description" content="aidr runs in a second terminal next to Claude Code. For each edit it shows the diff, Claude's reason, a note on what to check and one question. Read only, no network, AGPL-3.0.">
+<title>AIDR: stream your agent's changes, code graphs, busywork and learnings</title>
+<meta name="description" content="AIDR is a CLI that runs next to Claude Code and streams each change with Claude's reason, the code graph it touches, the raw log and a question to check yourself. Read only, no network, AGPL-3.0.">
+<meta name="theme-color" content="#0f1014">
 <link rel="icon" href="logo.svg" type="image/svg+xml">
+<link rel="preload" href="fonts/bricolage-grotesque.woff2" as="font" type="font/woff2" crossorigin>
 <style>
+@font-face{font-family:"Bricolage Grotesque";src:url(fonts/bricolage-grotesque.woff2) format("woff2");font-weight:400 800;font-stretch:75% 100%;font-display:swap}
+@font-face{font-family:"JetBrains Mono";src:url(fonts/jetbrains-mono.woff2) format("woff2");font-weight:400 700;font-display:swap}
 :root{
- --paper:#f7f6f2;--ink:#1b1b22;--soft:#55556a;--line:#dddbd2;--panel:#ffffff;
- --term:#16161d;--term-ink:#d9d9e3;--term-soft:#8b8ba0;--red:#e5606b;--green:#4fc28a;--why:#c77ddb;--ask:#e8c15a;
- --accent:#6b3fa0;--accent-ink:#ffffff;
- --mono:ui-monospace,"SF Mono","JetBrains Mono",Menlo,Consolas,monospace;
- --sans:system-ui,-apple-system,"Segoe UI",Roboto,sans-serif;
- color-scheme:light;
+ --ground:#0f1014;--raise:#16171d;--well:#0a0b0e;--rule:#262833;--ink:#ecebe4;--soft:#a9a8b3;--faint:#8a8996;
+ --yellow:#f0c75e;--yellow-ink:#17140a;--red:#ef6f78;--green:#5fcf96;--violet:#c99cf0;--blue:#82b6f5;--cyan:#6fd0d6;
+ --display:"Bricolage Grotesque","Avenir Next","Segoe UI",system-ui,sans-serif;
+ --mono:"JetBrains Mono",ui-monospace,"SF Mono",Menlo,Consolas,monospace;
+ color-scheme:dark;
 }
-@media (prefers-color-scheme:dark){:root{
- --paper:#101015;--ink:#e9e9f0;--soft:#a2a2b5;--line:#2a2a35;--panel:#17171f;--term:#0b0b10;
- --accent:#c79bf0;--accent-ink:#16101d;color-scheme:dark;
-}}
 *{box-sizing:border-box}
-body{margin:0;background:var(--paper);color:var(--ink);font:17px/1.6 var(--sans)}
-.wrap{max-width:68rem;margin:0 auto;padding-inline:clamp(16px,4vw,40px)}
-a{color:var(--accent)}
-code,pre{font-family:var(--mono)}
-header{padding-block:20px;display:flex;align-items:center;gap:12px}
-header img{width:36px;height:36px}
-header b{font:600 18px var(--mono)}
-header nav{margin-left:auto;display:flex;gap:20px;font-size:15px}
-header nav a{color:var(--soft);text-decoration:none}
-header nav a:hover{color:var(--ink)}
-.hero{display:grid;grid-template-columns:minmax(0,1fr) minmax(0,1.15fr);gap:48px;align-items:center;padding-block:48px 72px}
-h1{font-size:clamp(2.2rem,5vw,3.6rem);line-height:1.05;letter-spacing:-.02em;margin:0 0 20px}
-.lead{font-size:1.15rem;color:var(--soft);margin:0 0 28px;max-width:34rem}
+html{scroll-behavior:smooth;scrollbar-color:#3a3c4a var(--ground)}
+@media (prefers-reduced-motion:reduce){html{scroll-behavior:auto}}
+body{margin:0;background:var(--ground);color:var(--ink);font:400 17.5px/1.6 var(--display);font-variation-settings:"opsz" 16;caret-color:var(--yellow);-webkit-font-smoothing:antialiased}
+::selection{background:var(--yellow);color:var(--yellow-ink)}
+a{color:var(--ink);text-decoration-color:var(--yellow);text-decoration-thickness:2px;text-underline-offset:.22em}
+a:hover{color:var(--yellow)}
+:focus-visible{outline:2px solid var(--yellow);outline-offset:3px;border-radius:4px}
+code{font:500 .88em var(--mono);white-space:nowrap;color:var(--ink);background:#1d1f27;padding:.1em .35em;border-radius:4px;overflow-wrap:anywhere}
+.wrap{max-width:72rem;margin:0 auto;padding-inline:clamp(16px,4vw,48px)}
+.measure{max-width:40rem}
+
+.small code,.ledger code{white-space:normal}
+
+/* Header */
+.top{display:flex;align-items:center;gap:12px;padding-block:22px}
+.top img{width:30px;height:30px}
+.top .name{font:700 17px var(--mono);letter-spacing:.04em}
+.top nav{margin-left:auto;display:flex;gap:24px;font-size:15px}
+.top nav a{color:var(--soft);text-decoration:none}
+.top nav a:hover{color:var(--ink)}
+
+/* Hero */
+.hero{padding-block:clamp(28px,6vw,72px) 0}
+.hero-head{display:grid;grid-template-columns:minmax(0,1.25fr) minmax(0,1fr);gap:clamp(24px,5vw,72px);align-items:end}
+h1{margin:0;line-height:.9;font-weight:800;font-stretch:75%;font-variation-settings:"opsz" 96;font-size:clamp(4.2rem,11vw,6rem);letter-spacing:-.03em}
+.tagline{margin:18px 0 0;font-size:clamp(1.45rem,2.6vw,2.05rem);line-height:1.18;font-weight:600;font-variation-settings:"opsz" 48;letter-spacing:-.012em;text-wrap:balance}
+.tagline .k{color:var(--yellow);text-decoration:underline dotted 2px;text-decoration-color:rgba(240,199,94,.45);text-underline-offset:.16em}
+.tagline .k:hover{text-decoration-color:var(--yellow)}
+.lead{margin:0 0 22px;color:var(--soft);font-size:1.05rem;text-wrap:pretty}
 .cta{display:flex;flex-wrap:wrap;gap:12px;align-items:center}
-.btn{display:inline-block;padding:12px 20px;border-radius:8px;font-weight:600;text-decoration:none;border:1px solid var(--accent)}
-.btn.main{background:var(--accent);color:var(--accent-ink)}
-.btn.alt{color:var(--accent)}
-.small{font-size:14px;color:var(--soft)}
-.term{background:var(--term);color:var(--term-ink);border-radius:12px;padding:18px 20px;font:13.5px/1.65 var(--mono);overflow-x:auto;box-shadow:0 1px 0 var(--line)}
-.term .bar{display:flex;gap:6px;margin-bottom:14px}
-.term .bar i{width:10px;height:10px;border-radius:50%;background:#3a3a48}
-.term pre{margin:0;white-space:pre}
-.f{color:#ffffff;font-weight:600}.s{color:var(--term-soft)}.r{color:var(--red)}.g{color:var(--green)}.w{color:var(--why)}.q{color:var(--ask)}.n{color:#7fb4f0}
-section{padding-block:56px;border-top:1px solid var(--line)}
-h2{font-size:1.7rem;letter-spacing:-.01em;margin:0 0 12px}
-section > .wrap > p{max-width:44rem}
-.steps{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:24px;margin-top:28px;padding:0;list-style:none;counter-reset:s}
-.steps li{counter-increment:s;background:var(--panel);border:1px solid var(--line);border-radius:10px;padding:20px}
-.steps li::before{content:counter(s);display:inline-grid;place-items:center;width:28px;height:28px;border-radius:50%;background:var(--accent);color:var(--accent-ink);font-weight:700;font-size:14px;margin-bottom:10px}
-.steps h3{margin:0 0 6px;font-size:1.05rem}
-.steps p{margin:0;color:var(--soft);font-size:15.5px}
-.code{position:relative;margin-top:28px}
-.code pre{background:var(--term);color:var(--term-ink);border-radius:10px;padding:18px 20px;margin:0;overflow-x:auto;font-size:14px;line-height:1.7}
-.code button{position:absolute;top:10px;right:10px;font:600 13px var(--sans);padding:6px 10px;border-radius:6px;border:1px solid #3a3a48;background:#22222c;color:var(--term-ink);cursor:pointer}
-.code button:focus-visible,.btn:focus-visible{outline:3px solid var(--ask);outline-offset:2px}
-.tablewrap{overflow-x:auto;margin-top:24px}
-table{border-collapse:collapse;width:100%;min-width:34rem;font-size:15.5px}
-th,td{text-align:left;padding:12px 14px;border-bottom:1px solid var(--line);vertical-align:top}
-th{font-size:13px;text-transform:uppercase;letter-spacing:.05em;color:var(--soft)}
-td code{white-space:nowrap;font-size:14px}
-.trust{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:16px 40px;margin-top:24px;padding:0;list-style:none}
-.trust li{padding-left:28px;position:relative}
-.trust li::before{content:"";position:absolute;left:0;top:.55em;width:12px;height:12px;border-radius:3px;background:var(--green)}
-dl{margin:24px 0 0;max-width:46rem}
-dt{font-weight:600;margin-top:20px}
-dd{margin:4px 0 0;color:var(--soft)}
-.final{text-align:center}
-.final .cta{justify-content:center;margin-top:20px}
-footer{padding-block:32px;border-top:1px solid var(--line);font-size:14px;color:var(--soft)}
-@media (max-width:860px){
- .hero{grid-template-columns:1fr;gap:32px;padding-block:24px 48px}
- .steps,.trust{grid-template-columns:1fr}
- header nav{gap:14px}
- section{padding-block:40px}
- .code pre{padding-top:48px}
- table{min-width:0}
- thead{display:none}
- tr{display:block;padding-block:10px;border-bottom:1px solid var(--line)}
- td{display:block;border:0;padding:2px 0}
- td code{white-space:normal}
+.btn{display:inline-flex;align-items:center;gap:8px;padding:12px 20px;border-radius:8px;font-weight:650;text-decoration:none;font-size:16px;transition:background-color .2s,color .2s,border-color .2s}
+.btn.main{background:var(--yellow);color:var(--yellow-ink)}
+.btn.main:hover{background:#f7d784;color:var(--yellow-ink)}
+.btn.alt{color:var(--ink);border:1px solid #3a3c4a}
+.btn.alt:hover{border-color:var(--ink);color:var(--ink)}
+.facts{margin:16px 0 0;padding:0;list-style:none;display:flex;flex-wrap:wrap;gap:6px 14px;font-size:13.5px;color:var(--faint)}
+.facts li{display:flex;align-items:center;gap:7px}
+.facts li::before{content:"";width:6px;height:6px;border-radius:50%;background:var(--green)}
+
+/* Terminal */
+.term{margin-top:clamp(32px,5vw,52px);background:var(--well);border:1px solid var(--rule);border-radius:14px;box-shadow:0 30px 60px -30px rgba(0,0,0,.8),0 2px 6px rgba(0,0,0,.35);overflow:hidden}
+.tabs{display:flex;align-items:stretch;gap:2px;padding:0 10px;border-bottom:1px solid var(--rule);background:var(--raise);overflow-x:auto;scrollbar-width:none}
+.tabs::-webkit-scrollbar{display:none}
+.dots{display:flex;gap:7px;align-items:center;padding:0 12px 0 6px}
+.dots i{width:11px;height:11px;border-radius:50%;background:#2f313c}
+.tab{appearance:none;border:0;background:none;color:var(--faint);font:600 14px var(--display);padding:13px 14px 12px;cursor:pointer;border-bottom:2px solid transparent;white-space:nowrap;transition:color .2s}
+.tab:hover{color:var(--ink)}
+.tab[aria-selected="true"]{color:var(--ink);border-bottom-color:var(--yellow)}
+.panel{padding:18px 22px 22px;overflow-x:auto;scrollbar-color:#30323e var(--well)}
+.cmd{margin:0 0 12px;font:500 13.5px var(--mono);color:var(--soft)}
+.cmd b{color:var(--green);font-weight:500}
+.panel pre{margin:0;font:400 13.5px/1.6 var(--mono);color:#d9d9e3;white-space:pre}
+#p-graph pre{line-height:1.32}
+.pair{display:grid;grid-template-columns:minmax(0,.8fr) minmax(0,1.2fr);gap:24px;align-items:center}
+.models-pair{margin-top:24px}
+.diagram{margin:0;background:var(--well);border:1px solid var(--rule);border-radius:10px;padding:16px}
+.diagram svg{display:block;width:100%;height:auto;max-height:26rem}
+.diagram figcaption{margin-top:10px;font-size:13.5px;color:var(--faint)}
+.diagram.wide{padding:20px}
+.diagram.wide svg{max-height:32rem}
+.note{margin:14px 0 0;font-size:14px;color:var(--faint);max-width:52rem}
+.note b{color:var(--soft);font-weight:600}
+pre .line{display:block}
+.streaming .line{animation:line .42s cubic-bezier(.16,1,.3,1) both;animation-delay:calc(var(--i) * 32ms)}
+@keyframes line{from{opacity:0;transform:translateY(5px);filter:blur(2px)}to{opacity:1;transform:none;filter:none}}
+@media (prefers-reduced-motion:reduce){.streaming .line{animation:none}}
+/* aidr's colour codes */
+.c1{font-weight:700;color:#f2f2f7}.c2{opacity:.7}.c3{font-style:italic}.c31{color:var(--red)}.c32{color:var(--green)}.c33{color:var(--yellow)}.c34{color:var(--blue)}.c35{color:var(--violet)}.c36{color:var(--cyan)}.c90{color:#7d7c8c}.c93{color:#f3d58a}.c94{color:var(--blue)}.c95{color:#e39ad8}.c96{color:#8fe0e6}
+
+/* Sections */
+section{padding-block:clamp(56px,9vw,104px) 0}
+h2{margin:0 0 14px;font-weight:750;font-stretch:85%;font-variation-settings:"opsz" 64;font-size:clamp(1.9rem,3.6vw,2.7rem);line-height:1.05;letter-spacing:-.02em;text-wrap:balance}
+p{margin:0 0 14px}
+.split{display:grid;grid-template-columns:minmax(0,.9fr) minmax(0,1.1fr);gap:clamp(28px,5vw,64px);align-items:start}
+.soft{color:var(--soft)}
+
+.steps{list-style:none;margin:30px 0 0;padding:0;display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:0;border-top:1px solid var(--rule)}
+.steps li{padding:20px 24px 0 0}
+.steps li + li{padding-left:24px;border-left:1px solid var(--rule)}
+.steps .n{display:block;font:700 13px var(--mono);color:var(--yellow);margin-bottom:8px}
+.steps h3{margin:0 0 6px;font-size:1.12rem;font-weight:700}
+.steps p{margin:0;color:var(--soft);font-size:16px}
+
+.code{position:relative;background:var(--well);border:1px solid var(--rule);border-radius:12px}
+.code pre{margin:0;padding:20px 22px;font:400 14px/1.8 var(--mono);overflow-x:auto;color:#d9d9e3}
+.code .c{color:var(--faint)}
+.code .p{color:var(--green)}
+.copy{position:absolute;top:10px;right:10px;appearance:none;font:600 13px var(--display);padding:6px 11px;border-radius:6px;border:1px solid #343644;background:var(--raise);color:var(--ink);cursor:pointer}
+.copy:hover{border-color:var(--ink)}
+.small{font-size:14.5px;color:var(--faint)}
+.small code{font-size:.85em}
+
+.mini{background:var(--well);border:1px solid var(--rule);border-radius:12px;padding:18px 20px;overflow-x:auto}
+.mini pre{margin:0;font:400 13px/1.7 var(--mono);color:#d9d9e3;white-space:pre}
+
+.tablewrap{overflow-x:auto;margin-top:8px}
+table{border-collapse:collapse;width:100%;font-size:16px}
+td{padding:13px 16px 13px 0;border-bottom:1px solid var(--rule);vertical-align:top}
+tr:first-child td{border-top:1px solid var(--rule)}
+td:first-child{width:15rem}
+td code{background:none;padding:0;color:var(--yellow);white-space:nowrap}
+
+.ledger{display:grid;grid-template-columns:1fr 1fr;gap:clamp(24px,4vw,56px);margin-top:28px}
+.ledger h3{margin:0 0 10px;font:700 13px var(--mono);letter-spacing:.06em;text-transform:uppercase}
+.ledger .yes h3{color:var(--green)}.ledger .no h3{color:var(--red)}
+.ledger ul{margin:0;padding:0;list-style:none}
+.ledger li{padding:11px 0;border-top:1px solid var(--rule);color:var(--soft)}
+.ledger li b{color:var(--ink);font-weight:600}
+
+dl{margin:0}
+.faq{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:8px 56px}
+.faq div{padding:16px 0;border-top:1px solid var(--rule)}
+dt{font-weight:700;margin-bottom:4px}
+dd{margin:0;color:var(--soft)}
+
+.final{padding-block:clamp(72px,11vw,128px);text-align:center}
+.final h2{font-size:clamp(2.2rem,5vw,3.6rem)}
+.final .cta{justify-content:center;margin-top:24px}
+footer{border-top:1px solid var(--rule);padding-block:28px;font-size:14px;color:var(--faint);display:flex;flex-wrap:wrap;gap:8px 24px}
+footer a{color:var(--soft)}
+
+@media (max-width:900px){
+ .hero-head,.split,.pair{grid-template-columns:minmax(0,1fr)}
+ .steps{grid-template-columns:1fr}
+ .steps li,.steps li + li{padding:18px 0;border-left:0;border-bottom:1px solid var(--rule)}
+ .faq,.ledger{grid-template-columns:1fr}
 }
-@media (max-width:480px){header nav a.opt{display:none}}
+@media (max-width:560px){
+ body{font-size:16.5px}
+ .top nav a.opt{display:none}
+ .dots{display:none}
+ .tabs{padding:0 4px}
+ .tab{padding:12px 9px 11px;font-size:13.5px}
+ .panel{padding:14px 14px 18px}
+ .panel pre,.mini pre{font-size:11.5px;white-space:pre-wrap}
+ .panel pre .line,.mini pre .line{padding-left:3ch;text-indent:-3ch}
+ .code pre{padding-top:48px;font-size:13px}
+ td{display:block;padding:0}
+ tr{display:block;padding:12px 0;border-bottom:1px solid var(--rule)}
+ tr:first-child td{border-top:0}
+ td:first-child{width:auto;margin-bottom:2px}
+}
+/* Code shows the characters as typed: no ligatures (JetBrains Mono joins --> into one arrow). Last, so no font shorthand resets it. */
+pre,pre *,code{font-variant-ligatures:none;font-feature-settings:"calt" 0,"liga" 0}
 </style>
 </head>
 <body>
-<header class="wrap">
- <img src="logo.svg" alt="" width="36" height="36"><b>aidr</b>
- <nav><a class="opt" href="#how">How it works</a><a class="opt" href="#trust">Privacy</a><a href="https://github.com/niccolox/aidr">GitHub</a></nav>
+<header class="wrap top">
+ <img src="logo.svg" alt="" width="30" height="30"><span class="name">AIDR</span>
+ <nav><a class="opt" href="#how">How it works</a><a class="opt" href="#privacy">Privacy</a><a href="https://github.com/niccolox/aidr">GitHub</a></nav>
 </header>
 
 <main>
 <div class="wrap hero">
- <div>
-  <h1>See what Claude Code changed, and why.</h1>
-  <p class="lead">aidr runs in a second terminal next to Claude Code. For each edit, it shows the diff, the reason Claude gave, a note on what to check, and one question to answer before you go on.</p>
-  <div class="cta">
-   <a class="btn main" href="#install">Install from source</a>
-   <a class="btn alt" href="https://github.com/niccolox/aidr/tree/main/lib">Read the code</a>
+ <div class="hero-head">
+  <div>
+   <h1>AIDR</h1>
+   <p class="tagline">A CLI that streams your agent's <a class="k" href="#views" data-tab="changes">changes</a>, <a class="k" href="#views" data-tab="graph">code graphs</a>, <a class="k" href="#views" data-tab="busywork">busywork</a> and <a class="k" href="#views" data-tab="learnings">learnings</a>.</p>
   </div>
-  <p class="small">Read only. No network. No dependencies. Linux and macOS. AGPL-3.0.</p>
+  <div>
+   <p class="lead">Run it in a second terminal next to Claude Code. Each edit arrives with the reason Claude gave, the code it touches, and one question to answer before you accept the next one.</p>
+   <div class="cta">
+    <a class="btn main" href="#install">Install from source</a>
+    <a class="btn alt" href="https://github.com/niccolox/aidr/tree/main/lib">Read the code</a>
+   </div>
+   <ul class="facts"><li>Read only</li><li>No network</li><li>No dependencies</li><li>Linux, macOS</li></ul>
+  </div>
  </div>
- <div class="term" role="img" aria-label="Terminal output of aidr for one edit: the file, Claude's reason, the diff, a note and a question">
-  <div class="bar"><i></i><i></i><i></i></div>
-<pre><span class="s">$</span> aidr
-<span class="s">10:42:07</span>  <span class="n">shop</span>  🔧 <span class="n">In process</span> <span class="s">·</span> <span class="f">Edit</span>
-  ✏️  <span class="f">app/cart.py</span>  <span class="g">+1</span> <span class="r">-1</span>
-  <span class="s">│</span> <span class="w">💭 Why: The total ignored the quantity of each line,</span>
-  <span class="s">│</span> <span class="w">so two mugs cost the price of one.</span>
-  <span class="s">│</span>   <span class="n">def</span> total(items):
-  <span class="s">│</span> <span class="r">-     return sum(i.price for i in items)</span>
-  <span class="s">│</span> <span class="g">+     return sum(i.price * i.quantity for i in items)</span>
-  <span class="s">│</span> 📘 <span class="s">Changes what a function gives back: check</span>
-  <span class="s">│</span> <span class="s">every place that reads its result.</span>
-  <span class="s">│</span> <span class="q">❓ Check yourself: Why was this change needed?</span></pre>
+
+ <div class="term" id="views">
+  <div class="tabs" role="tablist" aria-label="AIDR views">
+   <span class="dots" aria-hidden="true"><i></i><i></i><i></i></span>
+   <button class="tab" role="tab" id="t-changes" aria-controls="p-changes" aria-selected="true">Changes</button>
+   <button class="tab" role="tab" id="t-graph" aria-controls="p-graph" aria-selected="false" tabindex="-1">Code graphs</button>
+   <button class="tab" role="tab" id="t-busywork" aria-controls="p-busywork" aria-selected="false" tabindex="-1">Busywork</button>
+   <button class="tab" role="tab" id="t-learnings" aria-controls="p-learnings" aria-selected="false" tabindex="-1">Learnings</button>
+  </div>
+  <div class="screens">
+  <div class="panel" role="tabpanel" id="p-changes" aria-labelledby="t-changes">
+   <p class="cmd"><b>$</b> aidr --changes</p>
+<pre><span class="c90">10:41:02</span>  <span class="c34">shop</span>  🗺️  <span class="c35">Planned</span> <span class="c90">·</span> <span class="c1">Plan</span> <span class="c90">|</span> Fix the cart total
+  <span class="c90">│</span> 1. Multiply each price by its quantity
+  <span class="c90">│</span> 2. Add a test for two of the same item
+<span class="c90">10:42:07</span>  <span class="c34">shop</span>  🔧 <span class="c36">In process</span> <span class="c90">·</span> <span class="c1">Edit</span>
+  ✏️  <span class="c1">app/cart.py</span>  <span class="c32">+1</span> <span class="c31">-1</span>
+  <span class="c90">│</span> <span class="c35">💭 Why: </span><span class="c35">The total ignored the quantity, so two mugs cost the price of one.</span>
+  <span class="c90">│</span>   <span class="c95">def</span> <span class="c1 c94">total</span>(items):
+  <span class="c90">│</span> <span class="c31">-     return sum(i.price for i in items)</span>
+  <span class="c90">│</span> <span class="c1"><span class="c32">+</span></span>     <span class="c95">return</span> <span class="c36">sum</span>(i.price * i.quantity <span class="c95">for</span> i <span class="c95">in</span> items)
+  <span class="c90">│</span> <span class="c36">📘 Changes what a function gives back: check every place that reads its result.</span>
+  <span class="c90">│</span> <span class="c33">❓ Check yourself: Why was this change needed? Use the &quot;Why&quot; line, then say it in your own words.</span>
+<span class="c90">10:44:30</span>  <span class="c34">shop</span>  ✅ <span class="c32">Completed</span> <span class="c90">·</span> <span class="c1">Commit</span> <span class="c90">|</span> fix(cart): the total counts the quantity of each line</pre>
+   <p class="note"><b>Changes:</b> what Claude planned, what is in process, and what is complete, with the reason for each edit.</p>
+  </div>
+  <div class="panel" role="tabpanel" id="p-graph" aria-labelledby="t-graph" hidden>
+   <p class="cmd"><b>$</b> aidr</p>
+<pre><span class="c90">10:42:07</span>  <span class="c34">shop</span>  🔧 <span class="c36">In process</span> <span class="c90">·</span> <span class="c1">Edit</span>
+  ✏️  <span class="c1">app/cart.py</span>  <span class="c32">+1</span> <span class="c31">-1</span>
+  <span class="c90">│</span> <span class="c34">🕸 Map of `total`</span> <span class="c90">(CodeGraph, app/cart.py:12)</span>
+  <span class="c90">│</span>    <span class="c94">     checkout</span><span class="c90"> ──┐</span>
+  <span class="c90">│</span>    <span class="c94">    cart_page</span><span class="c90"> ──┼</span><span class="c90">──▶ </span><span class="c1 c94">total</span><span class="c90"> ──</span><span class="c90">┬──▶ </span><span class="c94">line_price</span>
+  <span class="c90">│</span>    <span class="c94">invoice_lines</span><span class="c90"> ──┘</span>            <span class="c90">└──▶ </span><span class="c94">money</span>
+  <span class="c90">│</span>    <span class="c34">← called by</span> checkout <span class="c90">(orders.py:40)</span>, cart_page <span class="c90">(views.py:88)</span>, invoice_lines <span class="c90">(invoice.py:17)</span>
+  <span class="c90">│</span>    <span class="c34">→ uses</span> line_price, money
+  <span class="c90">│</span>    <span class="c34">⇢ reaches</span> 4 other files within 3 steps
+  <span class="c90">│</span>    <span class="c32">🧪 1 test reaches it</span> <span class="c90">(tests/test_cart.py)</span></pre>
+   <div class="pair">
+<pre>  <span class="c90">│</span>    <span class="c90">```mermaid</span>
+  <span class="c90">│</span>    <span class="c90">flowchart LR</span>
+  <span class="c90">│</span>    <span class="c90">  n0[&quot;total&quot;]</span>
+  <span class="c90">│</span>    <span class="c90">  n1[&quot;checkout&quot;]</span>
+  <span class="c90">│</span>    <span class="c90">  n2[&quot;cart_page&quot;]</span>
+  <span class="c90">│</span>    <span class="c90">  n3[&quot;invoice_lines&quot;]</span>
+  <span class="c90">│</span>    <span class="c90">  n4[&quot;line_price&quot;]</span>
+  <span class="c90">│</span>    <span class="c90">  n5[&quot;money&quot;]</span>
+  <span class="c90">│</span>    <span class="c90">  n6[&quot;test_two_mugs&quot;]</span>
+  <span class="c90">│</span>    <span class="c90">  n1 --&gt; n0</span>
+  <span class="c90">│</span>    <span class="c90">  n2 --&gt; n0</span>
+  <span class="c90">│</span>    <span class="c90">  n3 --&gt; n0</span>
+  <span class="c90">│</span>    <span class="c90">  n0 --&gt; n4</span>
+  <span class="c90">│</span>    <span class="c90">  n0 --&gt; n5</span>
+  <span class="c90">│</span>    <span class="c90">  n6 -. tests .-&gt; n0</span>
+  <span class="c90">│</span>    <span class="c90">  classDef changed stroke-width:3px</span>
+  <span class="c90">│</span>    <span class="c90">  class n0 changed</span>
+  <span class="c90">│</span>    <span class="c90">```</span></pre>
+    <figure class="diagram"><svg id="aidr-graph" width="100%" xmlns="http://www.w3.org/2000/svg" class="flowchart" style="max-width: 764px;" viewBox="4 4 764 289" role="graphics-document document" aria-roledescription="flowchart-v2"><style>#aidr-graph{font-family:JetBrains Mono,ui-monospace,monospace;font-size:14px;fill:#ecebe4;}@keyframes edge-animation-frame{from{stroke-dashoffset:0;}}@keyframes dash{to{stroke-dashoffset:0;}}#aidr-graph .edge-animation-slow{stroke-dasharray:9,5!important;stroke-dashoffset:900;animation:dash 50s linear infinite;stroke-linecap:round;}#aidr-graph .edge-animation-fast{stroke-dasharray:9,5!important;stroke-dashoffset:900;animation:dash 20s linear infinite;stroke-linecap:round;}#aidr-graph .error-icon{fill:#16171d;}#aidr-graph .error-text{fill:#e9e8e2;stroke:#e9e8e2;}#aidr-graph .edge-thickness-normal{stroke-width:1px;}#aidr-graph .edge-thickness-thick{stroke-width:3.5px;}#aidr-graph .edge-pattern-solid{stroke-dasharray:0;}#aidr-graph .edge-thickness-invisible{stroke-width:0;fill:none;}#aidr-graph .edge-pattern-dashed{stroke-dasharray:3;}#aidr-graph .edge-pattern-dotted{stroke-dasharray:2;}#aidr-graph .marker{fill:#7d7c8c;stroke:#7d7c8c;}#aidr-graph .marker.cross{stroke:#7d7c8c;}#aidr-graph svg{font-family:JetBrains Mono,ui-monospace,monospace;font-size:14px;}#aidr-graph p{margin:0;}#aidr-graph .label{font-family:JetBrains Mono,ui-monospace,monospace;color:#ecebe4;}#aidr-graph .cluster-label text{fill:#e9e8e2;}#aidr-graph .cluster-label span{color:#e9e8e2;}#aidr-graph .cluster-label span p{background-color:transparent;}#aidr-graph .label text,#aidr-graph span{fill:#ecebe4;color:#ecebe4;}#aidr-graph .node rect,#aidr-graph .node circle,#aidr-graph .node ellipse,#aidr-graph .node polygon,#aidr-graph .node path{fill:#16171d;stroke:#3a3c4a;stroke-width:1px;}#aidr-graph .rough-node .label text,#aidr-graph .node .label text,#aidr-graph .image-shape .label,#aidr-graph .icon-shape .label{text-anchor:middle;}#aidr-graph .node .katex path{fill:#000;stroke:#000;stroke-width:1px;}#aidr-graph .rough-node .label,#aidr-graph .node .label,#aidr-graph .image-shape .label,#aidr-graph .icon-shape .label{text-align:center;}#aidr-graph .node.clickable{cursor:pointer;}#aidr-graph .root .anchor path{fill:#7d7c8c!important;stroke-width:0;stroke:#7d7c8c;}#aidr-graph .arrowheadPath{fill:#f5f4f1;}#aidr-graph .edgePaths .path{stroke:#7d7c8c;stroke-width:1px;}#aidr-graph .flowchart-link{stroke:#7d7c8c;fill:none;}#aidr-graph .edgeLabel{background-color:#0a0b0e;text-align:center;}#aidr-graph .edgeLabel p{background-color:#0a0b0e;}#aidr-graph .edgeLabel rect{opacity:0.5;background-color:#0a0b0e;fill:#0a0b0e;}#aidr-graph .labelBkg{background-color:rgba(10, 11, 14, 0.5);}#aidr-graph .cluster rect{fill:#16171d;stroke:hsl(231.4285714286, 0%, 20%);stroke-width:1px;}#aidr-graph .cluster text{fill:#e9e8e2;}#aidr-graph .cluster span{color:#e9e8e2;}#aidr-graph .node .collapsed-indicator{fill:hsl(231.4285714286, 0%, 20%);stroke:none;opacity:0.6;}#aidr-graph .node .collapsed-separator{stroke:hsl(231.4285714286, 0%, 20%);stroke-width:0.75px;}#aidr-graph div.mermaidTooltip{position:absolute;text-align:center;max-width:200px;padding:2px;font-family:JetBrains Mono,ui-monospace,monospace;font-size:12px;background:#16171d;border:1px solid hsl(231.4285714286, 0%, 20%);border-radius:2px;pointer-events:none;z-index:100;}#aidr-graph .flowchartTitleText{text-anchor:middle;font-size:18px;fill:#ecebe4;}#aidr-graph rect.text{fill:none;stroke-width:0;}#aidr-graph .icon-shape,#aidr-graph .image-shape{background-color:#0a0b0e;text-align:center;}#aidr-graph .icon-shape p,#aidr-graph .image-shape p{background-color:#0a0b0e;padding:2px;}#aidr-graph .icon-shape .label rect,#aidr-graph .image-shape .label rect{opacity:0.5;background-color:#0a0b0e;fill:#0a0b0e;}#aidr-graph .label-icon{display:inline-block;height:1em;overflow:visible;vertical-align:-0.125em;}#aidr-graph .node .label-icon path{fill:currentColor;stroke:revert;stroke-width:revert;}#aidr-graph .node .neo-node{stroke:#3a3c4a;}#aidr-graph [data-look="neo"].node rect,#aidr-graph [data-look="neo"].cluster rect,#aidr-graph [data-look="neo"].node polygon{stroke:url(#aidr-graph-gradient);filter:drop-shadow( 1px 2px 2px rgba(185,185,185,1));}#aidr-graph [data-look="neo"].swimlane.cluster rect{filter:none;}#aidr-graph [data-look="neo"].node path{stroke:url(#aidr-graph-gradient);stroke-width:1px;}#aidr-graph [data-look="neo"].node .outer-path{filter:drop-shadow( 1px 2px 2px rgba(185,185,185,1));}#aidr-graph [data-look="neo"].node .neo-line path{stroke:#3a3c4a;filter:none;}#aidr-graph [data-look="neo"].node circle{stroke:url(#aidr-graph-gradient);filter:drop-shadow( 1px 2px 2px rgba(185,185,185,1));}#aidr-graph [data-look="neo"].node circle .state-start{fill:#000000;}#aidr-graph [data-look="neo"].icon-shape .icon{fill:url(#aidr-graph-gradient);filter:drop-shadow( 1px 2px 2px rgba(185,185,185,1));}#aidr-graph [data-look="neo"].icon-shape .icon-neo path{stroke:url(#aidr-graph-gradient);filter:drop-shadow( 1px 2px 2px rgba(185,185,185,1));}#aidr-graph :root{--mermaid-font-family:"trebuchet ms",verdana,arial,sans-serif;}#aidr-graph .changed rect{stroke-width:3px!important;stroke:rgb(240, 199, 94)!important;}#aidr-graph .changed polygon{stroke-width:3px!important;stroke:rgb(240, 199, 94)!important;}#aidr-graph .changed ellipse{stroke-width:3px!important;stroke:rgb(240, 199, 94)!important;}#aidr-graph .changed circle{stroke-width:3px!important;stroke:rgb(240, 199, 94)!important;}#aidr-graph .changed path{stroke-width:3px!important;stroke:rgb(240, 199, 94)!important;}</style><g><marker id="aidr-graph_flowchart-v2-pointEnd" class="marker flowchart-v2" viewBox="0 0 10 10" refX="5" refY="5" markerUnits="userSpaceOnUse" markerWidth="8" markerHeight="8" orient="auto"><path d="M 0 0 L 10 5 L 0 10 z" class="arrowMarkerPath" style="stroke-width: 1; stroke-dasharray: 1, 0;"></path></marker><marker id="aidr-graph_flowchart-v2-pointStart" class="marker flowchart-v2" viewBox="0 0 10 10" refX="4.5" refY="5" markerUnits="userSpaceOnUse" markerWidth="8" markerHeight="8" orient="auto"><path d="M 0 5 L 10 10 L 10 0 z" class="arrowMarkerPath" style="stroke-width: 1; stroke-dasharray: 1, 0;"></path></marker><marker id="aidr-graph_flowchart-v2-pointEnd-margin" class="marker flowchart-v2" viewBox="0 0 11.5 14" refX="11.5" refY="7" markerUnits="userSpaceOnUse" markerWidth="10.5" markerHeight="14" orient="auto"><path d="M 0 0 L 11.5 7 L 0 14 z" class="arrowMarkerPath" style="stroke-width: 0; stroke-dasharray: 1, 0;"></path></marker><marker id="aidr-graph_flowchart-v2-pointStart-margin" class="marker flowchart-v2" viewBox="0 0 11.5 14" refX="1" refY="7" markerUnits="userSpaceOnUse" markerWidth="11.5" markerHeight="14" orient="auto"><polygon points="0,7 11.5,14 11.5,0" class="arrowMarkerPath" style="stroke-width: 0; stroke-dasharray: 1, 0;"></polygon></marker><marker id="aidr-graph_flowchart-v2-circleEnd" class="marker flowchart-v2" viewBox="0 0 10 10" refX="11" refY="5" markerUnits="userSpaceOnUse" markerWidth="11" markerHeight="11" orient="auto"><circle cx="5" cy="5" r="5" class="arrowMarkerPath" style="stroke-width: 1; stroke-dasharray: 1, 0;"></circle></marker><marker id="aidr-graph_flowchart-v2-circleStart" class="marker flowchart-v2" viewBox="0 0 10 10" refX="-1" refY="5" markerUnits="userSpaceOnUse" markerWidth="11" markerHeight="11" orient="auto"><circle cx="5" cy="5" r="5" class="arrowMarkerPath" style="stroke-width: 1; stroke-dasharray: 1, 0;"></circle></marker><marker id="aidr-graph_flowchart-v2-circleEnd-margin" class="marker flowchart-v2" viewBox="0 0 10 10" refY="5" refX="12.25" markerUnits="userSpaceOnUse" markerWidth="14" markerHeight="14" orient="auto"><circle cx="5" cy="5" r="5" class="arrowMarkerPath" style="stroke-width: 0; stroke-dasharray: 1, 0;"></circle></marker><marker id="aidr-graph_flowchart-v2-circleStart-margin" class="marker flowchart-v2" viewBox="0 0 10 10" refX="-2" refY="5" markerUnits="userSpaceOnUse" markerWidth="14" markerHeight="14" orient="auto"><circle cx="5" cy="5" r="5" class="arrowMarkerPath" style="stroke-width: 0; stroke-dasharray: 1, 0;"></circle></marker><marker id="aidr-graph_flowchart-v2-crossEnd" class="marker cross flowchart-v2" viewBox="0 0 11 11" refX="12" refY="5.2" markerUnits="userSpaceOnUse" markerWidth="11" markerHeight="11" orient="auto"><path d="M 1,1 l 9,9 M 10,1 l -9,9" class="arrowMarkerPath" style="stroke-width: 2; stroke-dasharray: 1, 0;"></path></marker><marker id="aidr-graph_flowchart-v2-crossStart" class="marker cross flowchart-v2" viewBox="0 0 11 11" refX="-1" refY="5.2" markerUnits="userSpaceOnUse" markerWidth="11" markerHeight="11" orient="auto"><path d="M 1,1 l 9,9 M 10,1 l -9,9" class="arrowMarkerPath" style="stroke-width: 2; stroke-dasharray: 1, 0;"></path></marker><marker id="aidr-graph_flowchart-v2-crossEnd-margin" class="marker cross flowchart-v2" viewBox="0 0 15 15" refX="17.7" refY="7.5" markerUnits="userSpaceOnUse" markerWidth="12" markerHeight="12" orient="auto"><path d="M 1,1 L 14,14 M 1,14 L 14,1" class="arrowMarkerPath" style="stroke-width: 2.5;"></path></marker><marker id="aidr-graph_flowchart-v2-crossStart-margin" class="marker cross flowchart-v2" viewBox="0 0 15 15" refX="-3.5" refY="7.5" markerUnits="userSpaceOnUse" markerWidth="12" markerHeight="12" orient="auto"><path d="M 1,1 L 14,14 M 1,14 L 14,1" class="arrowMarkerPath" style="stroke-width: 2.5; stroke-dasharray: 1, 0;"></path></marker><g class="root"><g class="clusters"></g><g class="edges edgePaths"><path d="M356,102.99999809265137L368.9289321881345,102.99999809265137Q376,102.99999809265137 376,110.07106590451684L376,134.1789302807859Q376,141.24999809265137 383.0710678118655,141.24999809265137L412,141.24999809265137" id="aidr-graph-L_n1_n0_0" class="edge-thickness-normal edge-pattern-solid edge-thickness-normal edge-pattern-solid flowchart-link" style="stroke-dasharray: 0 0 84.92171478271484 4; stroke-dashoffset: 0;;" data-edge="true" data-et="edge" data-id="L_n1_n0_0" data-points="W3sieCI6MzU2LCJ5IjoxMDIuOTk5OTk4MDkyNjUxMzd9LHsieCI6Mzc2LCJ5IjoxMDIuOTk5OTk4MDkyNjUxMzd9LHsieCI6Mzc2LCJ5IjoxNDEuMjQ5OTk4MDkyNjUxMzd9LHsieCI6NDE2LCJ5IjoxNDEuMjQ5OTk4MDkyNjUxMzd9XQ==" data-look="neo" marker-end="url(#aidr-graph_flowchart-v2-pointEnd-margin)"></path><path d="M356,183.49999809265137L368.9289321881345,183.49999809265137Q376,183.49999809265137 376,176.4289302807859L376,152.32106590451684Q376,145.24999809265137 383.0710678118655,145.24999809265137L412,145.24999809265137" id="aidr-graph-L_n2_n0_0" class="edge-thickness-normal edge-pattern-solid edge-thickness-normal edge-pattern-solid flowchart-link" style="stroke-dasharray: 0 0 84.92172241210938 4; stroke-dashoffset: 0;;" data-edge="true" data-et="edge" data-id="L_n2_n0_0" data-points="W3sieCI6MzU2LCJ5IjoxODMuNDk5OTk4MDkyNjUxMzd9LHsieCI6Mzc2LCJ5IjoxODMuNDk5OTk4MDkyNjUxMzd9LHsieCI6Mzc2LCJ5IjoxNDUuMjQ5OTk4MDkyNjUxMzd9LHsieCI6NDE2LCJ5IjoxNDUuMjQ5OTk4MDkyNjUxMzd9XQ==" data-look="neo" marker-end="url(#aidr-graph_flowchart-v2-pointEnd-margin)"></path><path d="M356,264.49999809265137L388.9289321881345,264.49999809265137Q396,264.49999809265137 396,257.4289302807859L396,156.32106590451684Q396,149.24999809265137 403.0710678118655,149.24999809265137L412,149.24999809265137" id="aidr-graph-L_n3_n0_0" class="edge-thickness-normal edge-pattern-solid edge-thickness-normal edge-pattern-solid flowchart-link" style="stroke-dasharray: 0 0 161.92172241210938 4; stroke-dashoffset: 0;;" data-edge="true" data-et="edge" data-id="L_n3_n0_0" data-points="W3sieCI6MzU2LCJ5IjoyNjQuNDk5OTk4MDkyNjUxMzd9LHsieCI6Mzk2LCJ5IjoyNjQuNDk5OTk4MDkyNjUxMzd9LHsieCI6Mzk2LCJ5IjoxNDkuMjQ5OTk4MDkyNjUxMzd9LHsieCI6NDE2LCJ5IjoxNDkuMjQ5OTk4MDkyNjUxMzd9XQ==" data-look="neo" marker-end="url(#aidr-graph_flowchart-v2-pointEnd-margin)"></path><path d="M568,139.91666475931802L580.9289321881345,139.91666475931802Q588,139.91666475931802 588,132.84559694745255L588,110.07106590451683Q588,102.99999809265135 595.0710678118655,102.99999809265135L604,102.99999809265135" id="aidr-graph-L_n0_n4_0" class="edge-thickness-normal edge-pattern-solid edge-thickness-normal edge-pattern-solid flowchart-link" style="stroke-dasharray: 0 0 63.58839416503906 4; stroke-dashoffset: 0;;" data-edge="true" data-et="edge" data-id="L_n0_n4_0" data-points="W3sieCI6NTY4LCJ5IjoxMzkuOTE2NjY0NzU5MzE4MDJ9LHsieCI6NTg4LCJ5IjoxMzkuOTE2NjY0NzU5MzE4MDJ9LHsieCI6NTg4LCJ5IjoxMDIuOTk5OTk4MDkyNjUxMzV9LHsieCI6NjA4LCJ5IjoxMDIuOTk5OTk4MDkyNjUxMzV9XQ==" data-look="neo" marker-end="url(#aidr-graph_flowchart-v2-pointEnd-margin)"></path><path d="M568,146.58333142598468L580.9289321881345,146.58333142598468Q588,146.58333142598468 588,153.65439923785016L588,176.4289302807859Q588,183.49999809265137 595.0710678118655,183.49999809265137L604,183.49999809265137" id="aidr-graph-L_n0_n5_0" class="edge-thickness-normal edge-pattern-solid edge-thickness-normal edge-pattern-solid flowchart-link" style="stroke-dasharray: 0 0 63.58839416503906 4; stroke-dashoffset: 0;;" data-edge="true" data-et="edge" data-id="L_n0_n5_0" data-points="W3sieCI6NTY4LCJ5IjoxNDYuNTgzMzMxNDI1OTg0Njh9LHsieCI6NTg4LCJ5IjoxNDYuNTgzMzMxNDI1OTg0Njh9LHsieCI6NTg4LCJ5IjoxODMuNDk5OTk4MDkyNjUxMzd9LHsieCI6NjA4LCJ5IjoxODMuNDk5OTk4MDkyNjUxMzd9XQ==" data-look="neo" marker-end="url(#aidr-graph_flowchart-v2-pointEnd-margin)"></path><path d="M164,32.5L388.9289321881345,32.5Q396,32.5 396,39.571067811865476L396,130.1789302807859Q396,137.24999809265137 403.0710678118655,137.24999809265137L412,137.24999809265137" id="aidr-graph-L_n6_n0_0" class="edge-thickness-normal edge-pattern-dotted edge-thickness-normal edge-pattern-solid flowchart-link" style="stroke-dasharray: 0 0 2 2 2 2 2 2 2 2 2 2 2 2 2 2 2 2 2 2 2 2 2 2 2 2 2 2 2 2 2 2 2 2 2 2 2 2 2 2 2 2 2 2 2 2 2 2 2 2 2 2 2 2 2 2 2 2 2 2 2 2 2 2 2 2 2 2 2 2 2 2 2 2 2 2 2 2 2 2 2 2 2 2 2 2 2 2 2 2 2 2 2 2 2 2 2 2 2 2 2 2 2 2 2 2 2 2 2 2 2 2 2 2 2 2 2 2 2 2 2 2 2 2 2 2 2 2 2 2 2 2 2 2 2 2 2 2 2 2 2 2 2 2 2 2 2 2 2 2 2 2 2 2 2 2 2 2 2 2 2 2 2 2 2 2 2 2 2 2 2 2 4; stroke-dashoffset: 0;;" data-edge="true" data-et="edge" data-id="L_n6_n0_0" data-points="W3sieCI6MTY0LCJ5IjozMi41fSx7IngiOjM5NiwieSI6MzIuNX0seyJ4IjozOTYsInkiOjEzNy4yNDk5OTgwOTI2NTEzN30seyJ4Ijo0MTYsInkiOjEzNy4yNDk5OTgwOTI2NTEzN31d" data-look="neo" marker-end="url(#aidr-graph_flowchart-v2-pointEnd-margin)"></path></g><g class="edgeLabels"><g class="edgeLabel" transform="translate(280, 31.999999046325684)"><g class="label" data-id="L_n6_n0_0" transform="translate(0, -9.000000476837158)"><g><rect class="background" style="" x="-23.078125" y="-0.9999990463256836" width="46.15625" height="19.999999046325684"></rect><text y="-10.1" text-anchor="middle" style=""><tspan class="text-outer-tspan row" x="0" y="-0.1em" dy="1.1em" text-anchor="middle"><tspan font-style="normal" class="text-inner-tspan" font-weight="normal">tests</tspan></tspan></text></g></g></g></g><g class="nodes"><g class="node default changed" id="aidr-graph-flowchart-n0-0" data-look="neo" transform="translate(492, 143.24999809265137)"><rect class="basic label-container" style="stroke-width:3px !important;stroke:#f0c75e !important" x="-76" y="-19.999999523162842" width="152" height="39.999999046325684"></rect><g class="label" style="" transform="translate(0, -7.999999523162842)"><rect></rect><g><rect class="background" style="stroke: none"></rect><text y="-10.1" style=""><tspan class="text-outer-tspan row" x="0" y="-0.1em" dy="1.1em"><tspan font-style="normal" class="text-inner-tspan" font-weight="normal">total</tspan></tspan></text></g></g></g><g class="node default" id="aidr-graph-flowchart-n1-1" data-look="neo" transform="translate(280, 102.99999809265137)"><rect class="basic label-container" style="" x="-76" y="-19.999999523162842" width="152" height="39.999999046325684"></rect><g class="label" style="" transform="translate(0, -7.999999523162842)"><rect></rect><g><rect class="background" style="stroke: none"></rect><text y="-10.1" style=""><tspan class="text-outer-tspan row" x="0" y="-0.1em" dy="1.1em"><tspan font-style="normal" class="text-inner-tspan" font-weight="normal">checkout</tspan></tspan></text></g></g></g><g class="node default" id="aidr-graph-flowchart-n2-2" data-look="neo" transform="translate(280, 183.49999809265137)"><rect class="basic label-container" style="" x="-76" y="-20.5" width="152" height="41"></rect><g class="label" style="" transform="translate(0, -8.5)"><rect></rect><g><rect class="background" style="stroke: none"></rect><text y="-10.1" style=""><tspan class="text-outer-tspan row" x="0" y="-0.1em" dy="1.1em"><tspan font-style="normal" class="text-inner-tspan" font-weight="normal">cart_page</tspan></tspan></text></g></g></g><g class="node default" id="aidr-graph-flowchart-n3-3" data-look="neo" transform="translate(280, 264.49999809265137)"><rect class="basic label-container" style="" x="-76" y="-20.5" width="152" height="41"></rect><g class="label" style="" transform="translate(0, -8.5)"><rect></rect><g><rect class="background" style="stroke: none"></rect><text y="-10.1" style=""><tspan class="text-outer-tspan row" x="0" y="-0.1em" dy="1.1em"><tspan font-style="normal" class="text-inner-tspan" font-weight="normal">invoice_lines</tspan></tspan></text></g></g></g><g class="node default" id="aidr-graph-flowchart-n4-4" data-look="neo" transform="translate(684, 102.99999809265135)"><rect class="basic label-container" style="" x="-76" y="-20.5" width="152" height="41"></rect><g class="label" style="" transform="translate(0, -8.5)"><rect></rect><g><rect class="background" style="stroke: none"></rect><text y="-10.1" style=""><tspan class="text-outer-tspan row" x="0" y="-0.1em" dy="1.1em"><tspan font-style="normal" class="text-inner-tspan" font-weight="normal">line_price</tspan></tspan></text></g></g></g><g class="node default" id="aidr-graph-flowchart-n5-5" data-look="neo" transform="translate(684, 183.49999809265137)"><rect class="basic label-container" style="" x="-76" y="-19.999999523162842" width="152" height="39.999999046325684"></rect><g class="label" style="" transform="translate(0, -7.999999523162842)"><rect></rect><g><rect class="background" style="stroke: none"></rect><text y="-10.1" style=""><tspan class="text-outer-tspan row" x="0" y="-0.1em" dy="1.1em"><tspan font-style="normal" class="text-inner-tspan" font-weight="normal">money</tspan></tspan></text></g></g></g><g class="node default" id="aidr-graph-flowchart-n6-6" data-look="neo" transform="translate(88, 32.5)"><rect class="basic label-container" style="" x="-76" y="-20.5" width="152" height="41"></rect><g class="label" style="" transform="translate(0, -8.5)"><rect></rect><g><rect class="background" style="stroke: none"></rect><text y="-10.1" style=""><tspan class="text-outer-tspan row" x="0" y="-0.1em" dy="1.1em"><tspan font-style="normal" class="text-inner-tspan" font-weight="normal">test_two_mugs</tspan></tspan></text></g></g></g></g></g></g><defs><filter id="aidr-graph-drop-shadow" height="130%" width="130%"><feDropShadow dx="4" dy="4" stdDeviation="0" flood-opacity="0.06" flood-color="#000000"></feDropShadow></filter></defs><defs><filter id="aidr-graph-drop-shadow-small" height="150%" width="150%"><feDropShadow dx="2" dy="2" stdDeviation="0" flood-opacity="0.06" flood-color="#000000"></feDropShadow></filter></defs><linearGradient id="aidr-graph-gradient" gradientUnits="objectBoundingBox" x1="0%" y1="0%" x2="100%" y2="0%"><stop offset="0%" stop-color="#3a3c4a" stop-opacity="1"></stop><stop offset="100%" stop-color="hsl(231.4285714286, 0%, 20%)" stop-opacity="1"></stop></linearGradient></svg>
+<figcaption>The same Mermaid text, as GitHub draws it in a pull request.</figcaption></figure>
+   </div>
+   <p class="note"><b>Code graphs:</b> the callers, the callees and the tests of each changed function, from a <a href="https://github.com/colbymchenry/codegraph">CodeGraph</a> index, as a terminal drawing and as Mermaid.</p>
+  </div>
+  <div class="panel" role="tabpanel" id="p-busywork" aria-labelledby="t-busywork" hidden>
+   <p class="cmd"><b>$</b> aidr --busywork</p>
+<pre><span class="c90">10:40:51</span>  <span class="c34">shop</span> <span class="c33">▌A</span>  🙋 <span class="c1">PROMPT</span>
+           <span class="c33">│</span> The cart total is wrong when I buy two mugs.
+<span class="c90">10:40:58</span>  <span class="c34">shop</span> <span class="c33">▌A</span>  📖 <span class="c36">Read</span> <span class="c90">|</span> app/cart.py
+<span class="c90">10:41:00</span>  <span class="c34">shop</span> <span class="c33">▌A</span>  💬 <span class="c32">SAYS</span>
+           <span class="c33">│</span> <span class="c93">total()</span> adds the <span class="c1">price</span> of each line and ignores <span class="c93">quantity</span>.
+           <span class="c33">│</span> 
+           <span class="c33">│</span> <span class="c36">•</span> <span class="c93">checkout</span> and <span class="c93">invoice_lines</span> read the total
+           <span class="c33">│</span> <span class="c36">•</span> no test covers two of the same item
+           <span class="c33">│</span> 
+           <span class="c33">│</span> I will multiply by the quantity, then add a test.
+<span class="c90">10:43:12</span>  <span class="c34">shop</span> <span class="c33">▌A</span>  🧪 <span class="c36">Bash</span> <span class="c90">|</span> Run the cart tests</pre>
+   <p class="note"><b>Busywork:</b> the raw log. Every prompt, tool call and text of Claude in full, as formatted Markdown.</p>
+  </div>
+  <div class="panel" role="tabpanel" id="p-learnings" aria-labelledby="t-learnings" hidden>
+   <p class="cmd"><b>$</b> aidr</p>
+<pre><span class="c90">10:43:05</span>  <span class="c34">shop</span>  🔧 <span class="c36">In process</span> <span class="c90">·</span> <span class="c1">Edit</span>
+  🆕 <span class="c1">tests/test_cart.py</span>  <span class="c32">+7</span> <span class="c31">-0</span>
+  <span class="c90">│</span> <span class="c35">💭 Why: </span><span class="c35">No test covered two of the same item.</span>
+  <span class="c90">│</span> <span class="c1"><span class="c32">+</span></span> <span class="c95">from</span> app.cart <span class="c95">import</span> total
+  <span class="c90">│</span> <span class="c1"><span class="c32">+</span></span> <span class="c95">from</span> tests.factory <span class="c95">import</span> item
+  <span class="c90">│</span> <span class="c1"><span class="c32">+</span></span> 
+  <span class="c90">│</span> <span class="c1"><span class="c32">+</span></span> 
+  <span class="c90">│</span> <span class="c1"><span class="c32">+</span></span> <span class="c95">def</span> <span class="c1 c94">test_two_mugs</span>():
+  <span class="c90">│</span> <span class="c1"><span class="c32">+</span></span>     mugs = <span class="c94">item</span>(price=<span class="c36">12</span>, quantity=<span class="c36">2</span>)
+  <span class="c90">│</span> <span class="c1"><span class="c32">+</span></span>     <span class="c95">assert</span> <span class="c94">total</span>([mugs]) == <span class="c36">24</span>
+  <span class="c90">│</span> <span class="c36">📘 A test. It states what the code must do: read the assert lines first, they are the rule.</span>
+  <span class="c90">│</span> <span class="c36">📘 A new Python file of 7 lines. Read its first comment: it says what the file is for.</span>
+  <span class="c90">│</span> <span class="c36">📘 Adds or changes `test_two_mugs`: a named piece that other code can call.</span>
+  <span class="c90">│</span> <span class="c33">❓ Check yourself: Which behaviour does this test protect, and what would break it?</span></pre>
+   <p class="note"><b>Learnings:</b> a note on how to read each change and one question to answer in your own words. Next: <code>aidr --learn</code> cards with links to the official docs.</p>
+  </div>
+  </div>
  </div>
 </div>
 
 <section id="why">
- <div class="wrap">
-  <h2>You stay the author of your code</h2>
-  <p>Claude Code edits files faster than you can read them. After an hour of work, your repository holds code that you did not write and may not be able to explain. aidr puts each change in front of you at the time Claude makes it, with the reason next to the lines.</p>
+ <div class="wrap split">
+  <h2>Claude Code writes faster than you read.</h2>
+  <div class="soft measure">
+   <p>After an hour of work, your repository holds code that you did not write and may not be able to explain. A review at the end comes too late, because ten more edits already rest on the first one.</p>
+   <p>AIDR shows each change at the time Claude makes it, with the reason next to the lines. You read it while the context is fresh, and you keep the authority over your code.</p>
+  </div>
  </div>
 </section>
 
 <section id="how">
  <div class="wrap">
-  <h2>How it works</h2>
+  <h2>Two terminals, one folder.</h2>
   <ol class="steps">
-   <li><h3>Install aidr</h3><p>Clone the repository and link the command. There are no packages to download.</p></li>
-   <li><h3>Start Claude Code</h3><p>Work in your project as usual. aidr needs no plugin and no change to your settings.</p></li>
-   <li><h3>Run aidr beside it</h3><p>Open a second terminal in the same folder and type <code>aidr</code>. Each change shows as Claude makes it.</p></li>
+   <li><span class="n">1</span><h3>Install AIDR</h3><p>Clone the repository and link the command. Nothing else is downloaded.</p></li>
+   <li><span class="n">2</span><h3>Start Claude Code</h3><p>Work in your project as usual. AIDR needs no plugin, no hook and no change to your settings.</p></li>
+   <li><span class="n">3</span><h3>Run <code>aidr</code> beside it</h3><p>Open a second terminal in the same folder. Each step and each change streams in as Claude works.</p></li>
   </ol>
  </div>
 </section>
 
 <section id="install">
- <div class="wrap">
-  <h2>Install from source</h2>
-  <p>The npm package <code>devekko.aidr</code> is not published yet. You need Node 20 or later and <code>git</code>.</p>
-  <div class="code">
-   <button type="button" data-copy="install">Copy</button>
-<pre id="install-text">git clone https://github.com/niccolox/aidr.git
-cd aidr
-npm test     # no dependencies to install
-npm link     # puts the aidr command on your PATH
-
-cd ~/code/your-project
-aidr</pre>
+ <div class="wrap split">
+  <div>
+   <h2>Install from source</h2>
+   <p class="soft">The npm package <code>devekko.aidr</code> is not published yet. You need Node 20 or later and <code>git</code>.</p>
+   <p class="small">Without <code>npm link</code>, run <code>node /path/to/aidr/bin/aidr.mjs</code>. To update, run <code>git pull</code> in the clone. To remove the command, run <code>npm unlink -g devekko.aidr</code>.</p>
   </div>
-  <p class="small">Without <code>npm link</code>, run <code>node /path/to/aidr/bin/aidr.mjs</code>. To update, run <code>git pull</code> in the clone. To remove the command, run <code>npm unlink -g devekko.aidr</code>.</p>
+  <div class="code">
+   <button type="button" class="copy" data-copy="install-text">Copy</button>
+<pre id="install-text"><span class="p">$</span> git clone https://github.com/niccolox/aidr.git
+<span class="p">$</span> cd aidr
+<span class="p">$</span> npm test     <span class="c"># no dependencies to install</span>
+<span class="p">$</span> npm link     <span class="c"># puts aidr on your PATH</span>
+
+<span class="p">$</span> cd ~/code/your-project
+<span class="p">$</span> aidr</pre>
+  </div>
  </div>
 </section>
 
-<section id="shows">
+<section id="models">
+ <div class="wrap split">
+  <div>
+   <h2>The Pydantic models a change touches.</h2>
+   <p class="soft">In a Python project, AIDR lists the models in play for each edit: their fields, their links to other models, and the fields the change names. It reads the files with Python's <code>ast</code> module, so no code of your project runs.</p>
+   <p class="soft">Each code graph and each set of models also prints as Mermaid. Paste it into a pull request or a document and GitHub draws it. <code>--no-mermaid</code> turns it off.</p>
+   <p class="small"><code>aidr stage HEAD~3..HEAD</code> gives the models and the code graph changes of a commit range, as Markdown tables and Mermaid.</p>
+  </div>
+  <div class="mini"><pre><span class="c90">10:43:40</span>  <span class="c34">shop</span>  🔧 <span class="c36">In process</span> <span class="c90">·</span> <span class="c1">Edit</span>
+  ✏️  <span class="c1">app/models.py</span>  <span class="c32">+1</span> <span class="c31">-0</span>
+  <span class="c90">│</span> <span class="c35">💭 Why: </span><span class="c35">The total needs a quantity on each line.</span>
+  <span class="c90">│</span>       price: <span class="c96">Decimal</span>
+  <span class="c90">│</span> <span class="c1"><span class="c32">+</span></span>     quantity: <span class="c36">int</span> = <span class="c36">1</span>
+  <span class="c90">│</span> <span class="c35">🧬 Ontology at play:</span> <span class="c1">2 Pydantic models</span> <span class="c90">(of 14 in the folder)</span>
+  <span class="c90">│</span>   <span class="c1 c94">CartItem</span> <span class="c90">(BaseModel)</span>  <span class="c90">app/models.py:21</span>
+  <span class="c90">│</span>     <span class="c3 c90">One line of a cart.</span>
+  <span class="c90">│</span>     <span class="c90">├─</span> product <span class="c90">──▶</span> <span class="c96">Product</span><span class="c33"> ✎</span>
+  <span class="c90">│</span>     <span class="c90">├─</span> price <span class="c90">:</span> <span class="c93">Decimal</span><span class="c33"> ✎</span>
+  <span class="c90">│</span>     <span class="c90">└─</span> quantity <span class="c90">:</span> <span class="c93">int</span><span class="c33"> ✎</span>
+  <span class="c90">│</span>   <span class="c1 c94">Cart</span> <span class="c90">(BaseModel)</span>  <span class="c90">app/models.py:30</span>
+  <span class="c90">│</span>     <span class="c90">├─</span> items <span class="c90">──▶</span> <span class="c96">CartItem</span>
+  <span class="c90">│</span>     <span class="c90">└─</span> customer <span class="c90">──▶</span> <span class="c96">Customer</span></pre></div>
+ </div>
+ <div class="wrap pair models-pair">
+  <div class="mini"><pre>  <span class="c90">│</span>   <span class="c90">```mermaid</span>
+  <span class="c90">│</span>   <span class="c90">classDiagram</span>
+  <span class="c90">│</span>   <span class="c90">  class CartItem {</span>
+  <span class="c90">│</span>   <span class="c90">    product Product</span>
+  <span class="c90">│</span>   <span class="c90">    price Decimal</span>
+  <span class="c90">│</span>   <span class="c90">    quantity int</span>
+  <span class="c90">│</span>   <span class="c90">  }</span>
+  <span class="c90">│</span>   <span class="c90">  class Cart {</span>
+  <span class="c90">│</span>   <span class="c90">    items list~CartItem~</span>
+  <span class="c90">│</span>   <span class="c90">    customer Customer</span>
+  <span class="c90">│</span>   <span class="c90">  }</span>
+  <span class="c90">│</span>   <span class="c90">  CartItem --&gt; Product : product</span>
+  <span class="c90">│</span>   <span class="c90">  Cart --&gt; CartItem : items</span>
+  <span class="c90">│</span>   <span class="c90">  Cart --&gt; Customer : customer</span>
+  <span class="c90">│</span>   <span class="c90">```</span></pre></div>
+  <figure class="diagram wide"><svg id="aidr-models" width="100%" xmlns="http://www.w3.org/2000/svg" class="classDiagram" style="max-width: 331.609375px;" viewBox="4 4 331.609375 557" role="graphics-document document" aria-roledescription="classDiagram"><style>#aidr-models{font-family:JetBrains Mono,ui-monospace,monospace;font-size:14px;fill:#ecebe4;}@keyframes edge-animation-frame{from{stroke-dashoffset:0;}}@keyframes dash{to{stroke-dashoffset:0;}}#aidr-models .edge-animation-slow{stroke-dasharray:9,5!important;stroke-dashoffset:900;animation:dash 50s linear infinite;stroke-linecap:round;}#aidr-models .edge-animation-fast{stroke-dasharray:9,5!important;stroke-dashoffset:900;animation:dash 20s linear infinite;stroke-linecap:round;}#aidr-models .error-icon{fill:#16171d;}#aidr-models .error-text{fill:#e9e8e2;stroke:#e9e8e2;}#aidr-models .edge-thickness-normal{stroke-width:1px;}#aidr-models .edge-thickness-thick{stroke-width:3.5px;}#aidr-models .edge-pattern-solid{stroke-dasharray:0;}#aidr-models .edge-thickness-invisible{stroke-width:0;fill:none;}#aidr-models .edge-pattern-dashed{stroke-dasharray:3;}#aidr-models .edge-pattern-dotted{stroke-dasharray:2;}#aidr-models .marker{fill:#7d7c8c;stroke:#7d7c8c;}#aidr-models .marker.cross{stroke:#7d7c8c;}#aidr-models svg{font-family:JetBrains Mono,ui-monospace,monospace;font-size:14px;}#aidr-models p{margin:0;}#aidr-models g.classGroup text{fill:#3a3c4a;stroke:none;font-family:JetBrains Mono,ui-monospace,monospace;font-size:10px;}#aidr-models g.classGroup text .title{font-weight:bolder;}#aidr-models .cluster-label text{fill:#e9e8e2;}#aidr-models .cluster-label span{color:#e9e8e2;}#aidr-models .cluster-label span p{background-color:transparent;}#aidr-models .cluster rect{fill:#16171d;stroke:hsl(231.4285714286, 0%, 20%);stroke-width:1px;}#aidr-models .cluster text{fill:#e9e8e2;}#aidr-models .cluster span{color:#e9e8e2;}#aidr-models .nodeLabel,#aidr-models .edgeLabel{color:#ecebe4;}#aidr-models .noteLabel .nodeLabel,#aidr-models .noteLabel .edgeLabel{color:#333;}#aidr-models .edgeLabel .label rect{fill:#16171d;}#aidr-models .label text{fill:#ecebe4;}#aidr-models .labelBkg{background:#16171d;}#aidr-models .edgeLabel .label span{background:#16171d;}#aidr-models .classTitle{font-weight:bolder;}#aidr-models .node rect,#aidr-models .node circle,#aidr-models .node ellipse,#aidr-models .node polygon,#aidr-models .node path{fill:#16171d;stroke:#3a3c4a;stroke-width:1;}#aidr-models .divider{stroke:#3a3c4a;stroke-width:1;}#aidr-models g.clickable{cursor:pointer;}#aidr-models g.classGroup rect{fill:#16171d;stroke:#3a3c4a;}#aidr-models g.classGroup line{stroke:#3a3c4a;stroke-width:1;}#aidr-models .classLabel .box{stroke:none;stroke-width:0;fill:#16171d;opacity:0.5;}#aidr-models .classLabel .label{fill:#3a3c4a;font-size:10px;}#aidr-models .relation{stroke:#7d7c8c;stroke-width:1;fill:none;}#aidr-models .dashed-line{stroke-dasharray:3;}#aidr-models .dotted-line{stroke-dasharray:1 2;}#aidr-models [id$="-compositionStart"],#aidr-models .composition{fill:#7d7c8c!important;stroke:#7d7c8c!important;stroke-width:1;}#aidr-models [id$="-compositionEnd"],#aidr-models .composition{fill:#7d7c8c!important;stroke:#7d7c8c!important;stroke-width:1;}#aidr-models [id$="-dependencyStart"],#aidr-models .dependency{fill:#7d7c8c!important;stroke:#7d7c8c!important;stroke-width:1;}#aidr-models [id$="-dependencyEnd"],#aidr-models .dependency{fill:#7d7c8c!important;stroke:#7d7c8c!important;stroke-width:1;}#aidr-models [id$="-extensionStart"],#aidr-models .extension{fill:transparent!important;stroke:#7d7c8c!important;stroke-width:1;}#aidr-models [id$="-extensionEnd"],#aidr-models .extension{fill:transparent!important;stroke:#7d7c8c!important;stroke-width:1;}#aidr-models [id$="-aggregationStart"],#aidr-models .aggregation{fill:transparent!important;stroke:#7d7c8c!important;stroke-width:1;}#aidr-models [id$="-aggregationEnd"],#aidr-models .aggregation{fill:transparent!important;stroke:#7d7c8c!important;stroke-width:1;}#aidr-models [id$="-lollipopStart"],#aidr-models .lollipop{fill:#16171d!important;stroke:#7d7c8c!important;stroke-width:1;}#aidr-models [id$="-lollipopEnd"],#aidr-models .lollipop{fill:#16171d!important;stroke:#7d7c8c!important;stroke-width:1;}#aidr-models .edgeTerminals{font-size:11px;line-height:initial;}#aidr-models .classTitleText{text-anchor:middle;font-size:18px;fill:#ecebe4;}#aidr-models .edgeLabel[data-look="neo"]{background-color:#0a0b0e;text-align:center;}#aidr-models .edgeLabel[data-look="neo"] p{background-color:#0a0b0e;}#aidr-models .edgeLabel[data-look="neo"] rect{opacity:0.5;background-color:#0a0b0e;fill:#0a0b0e;}#aidr-models .label-icon{display:inline-block;height:1em;overflow:visible;vertical-align:-0.125em;}#aidr-models .node .label-icon path{fill:currentColor;stroke:revert;stroke-width:revert;}#aidr-models .node .neo-node{stroke:#3a3c4a;}#aidr-models [data-look="neo"].node rect,#aidr-models [data-look="neo"].cluster rect,#aidr-models [data-look="neo"].node polygon{stroke:url(#aidr-models-gradient);filter:drop-shadow( 1px 2px 2px rgba(185,185,185,1));}#aidr-models [data-look="neo"].swimlane.cluster rect{filter:none;}#aidr-models [data-look="neo"].node path{stroke:url(#aidr-models-gradient);stroke-width:1px;}#aidr-models [data-look="neo"].node .outer-path{filter:drop-shadow( 1px 2px 2px rgba(185,185,185,1));}#aidr-models [data-look="neo"].node .neo-line path{stroke:#3a3c4a;filter:none;}#aidr-models [data-look="neo"].node circle{stroke:url(#aidr-models-gradient);filter:drop-shadow( 1px 2px 2px rgba(185,185,185,1));}#aidr-models [data-look="neo"].node circle .state-start{fill:#000000;}#aidr-models [data-look="neo"].icon-shape .icon{fill:url(#aidr-models-gradient);filter:drop-shadow( 1px 2px 2px rgba(185,185,185,1));}#aidr-models [data-look="neo"].icon-shape .icon-neo path{stroke:url(#aidr-models-gradient);filter:drop-shadow( 1px 2px 2px rgba(185,185,185,1));}#aidr-models :root{--mermaid-font-family:"trebuchet ms",verdana,arial,sans-serif;}</style><g><defs><marker id="aidr-models_classDiagram-aggregationStart" class="marker aggregation classDiagram" refX="18" refY="7" markerWidth="190" markerHeight="240" orient="auto" markerUnits="userSpaceOnUse"><path d="M 18,7 L9,13 L1,7 L9,1 Z"></path></marker></defs><defs><marker id="aidr-models_classDiagram-aggregationEnd" class="marker aggregation classDiagram" refX="1" refY="7" markerWidth="20" markerHeight="28" orient="auto" markerUnits="userSpaceOnUse"><path d="M 18,7 L9,13 L1,7 L9,1 Z"></path></marker></defs><defs><marker id="aidr-models_classDiagram-aggregationStart-margin" class="marker aggregation classDiagram" refX="15" refY="7" markerWidth="190" markerHeight="240" orient="auto" markerUnits="userSpaceOnUse"><path d="M 18,7 L9,13 L1,7 L9,1 Z" style="stroke-width: 2;"></path></marker></defs><defs><marker id="aidr-models_classDiagram-aggregationEnd-margin" class="marker aggregation classDiagram" refX="1" refY="7" markerWidth="20" markerHeight="28" orient="auto" markerUnits="userSpaceOnUse"><path d="M 18,7 L9,13 L1,7 L9,1 Z" style="stroke-width: 2;"></path></marker></defs><defs><marker id="aidr-models_classDiagram-extensionStart" class="marker extension classDiagram" refX="18" refY="7" markerWidth="20" markerHeight="28" orient="auto" markerUnits="userSpaceOnUse"><path d="M 1,7 L18,13 V 1 Z"></path></marker></defs><defs><marker id="aidr-models_classDiagram-extensionEnd" class="marker extension classDiagram" refX="1" refY="7" markerWidth="20" markerHeight="28" orient="auto" markerUnits="userSpaceOnUse"><path d="M 1,1 V 13 L18,7 Z"></path></marker></defs><marker id="aidr-models_classDiagram-extensionStart-margin" class="marker extension classDiagram" refX="18" refY="7" markerWidth="20" markerHeight="28" orient="auto" markerUnits="userSpaceOnUse" viewBox="0 0 20 14"><polygon points="10,7 18,13 18,1" style="stroke-width: 2; stroke-dasharray: 0;"></polygon></marker><defs><marker id="aidr-models_classDiagram-extensionEnd-margin" class="marker extension classDiagram" refX="9" refY="7" markerWidth="20" markerHeight="28" orient="auto" markerUnits="userSpaceOnUse" viewBox="0 0 20 14"><polygon points="10,1 10,13 18,7" style="stroke-width: 2; stroke-dasharray: 0;"></polygon></marker></defs><defs><marker id="aidr-models_classDiagram-compositionStart" class="marker composition classDiagram" refX="18" refY="7" markerWidth="190" markerHeight="240" orient="auto" markerUnits="userSpaceOnUse"><path d="M 18,7 L9,13 L1,7 L9,1 Z"></path></marker></defs><defs><marker id="aidr-models_classDiagram-compositionEnd" class="marker composition classDiagram" refX="1" refY="7" markerWidth="20" markerHeight="28" orient="auto" markerUnits="userSpaceOnUse"><path d="M 18,7 L9,13 L1,7 L9,1 Z"></path></marker></defs><defs><marker id="aidr-models_classDiagram-compositionStart-margin" class="marker composition classDiagram" refX="15" refY="7" markerWidth="190" markerHeight="240" orient="auto" markerUnits="userSpaceOnUse"><path viewBox="0 0 15 15" d="M 18,7 L9,13 L1,7 L9,1 Z" style="stroke-width: 0;"></path></marker></defs><defs><marker id="aidr-models_classDiagram-compositionEnd-margin" class="marker composition classDiagram" refX="3.5" refY="7" markerWidth="20" markerHeight="28" orient="auto" markerUnits="userSpaceOnUse"><path d="M 18,7 L9,13 L1,7 L9,1 Z" style="stroke-width: 0;"></path></marker></defs><defs><marker id="aidr-models_classDiagram-dependencyStart" class="marker dependency classDiagram" refX="6" refY="7" markerWidth="190" markerHeight="240" orient="auto" markerUnits="userSpaceOnUse"><path d="M 5,7 L9,13 L1,7 L9,1 Z"></path></marker></defs><defs><marker id="aidr-models_classDiagram-dependencyEnd" class="marker dependency classDiagram" refX="13" refY="7" markerWidth="20" markerHeight="28" orient="auto" markerUnits="userSpaceOnUse"><path d="M 18,7 L9,13 L14,7 L9,1 Z"></path></marker></defs><defs><marker id="aidr-models_classDiagram-dependencyStart-margin" class="marker dependency classDiagram" refX="4" refY="7" markerWidth="190" markerHeight="240" orient="auto" markerUnits="userSpaceOnUse"><path d="M 5,7 L9,13 L1,7 L9,1 Z" style="stroke-width: 0;"></path></marker></defs><defs><marker id="aidr-models_classDiagram-dependencyEnd-margin" class="marker dependency classDiagram" refX="16" refY="7" markerWidth="20" markerHeight="28" orient="auto" markerUnits="userSpaceOnUse"><path d="M 18,7 L9,13 L14,7 L9,1 Z" style="stroke-width: 0;"></path></marker></defs><defs><marker id="aidr-models_classDiagram-lollipopStart" class="marker lollipop classDiagram" refX="13" refY="7" markerWidth="190" markerHeight="240" orient="auto" markerUnits="userSpaceOnUse"><circle fill="transparent" cx="7" cy="7" r="6"></circle></marker></defs><defs><marker id="aidr-models_classDiagram-lollipopEnd" class="marker lollipop classDiagram" refX="1" refY="7" markerWidth="190" markerHeight="240" orient="auto" markerUnits="userSpaceOnUse"><circle fill="transparent" cx="7" cy="7" r="6"></circle></marker></defs><defs><marker id="aidr-models_classDiagram-lollipopStart-margin" class="marker lollipop classDiagram" refX="13" refY="7" markerWidth="190" markerHeight="240" orient="auto" markerUnits="userSpaceOnUse"><circle fill="transparent" cx="7" cy="7" r="6" stroke-width="2"></circle></marker></defs><defs><marker id="aidr-models_classDiagram-lollipopEnd-margin" class="marker lollipop classDiagram" refX="1" refY="7" markerWidth="190" markerHeight="240" orient="auto" markerUnits="userSpaceOnUse"><circle fill="transparent" cx="7" cy="7" r="6" stroke-width="2"></circle></marker></defs><g class="root"><g class="clusters"></g><g class="edges edgePaths"><path d="M104.0859375,376.99999809265137L104.0859375,470.99999618530273" id="aidr-models-id_CartItem_Product_1" class="edge-thickness-normal edge-pattern-solid relation" style="stroke-dasharray: 0 0 94 0; stroke-dashoffset: 0;;;;" data-edge="true" data-et="edge" data-id="id_CartItem_Product_1" data-points="W3sieCI6MTA0LjA4NTkzNzUsInkiOjM3Ni45OTk5OTgwOTI2NTEzN30seyJ4IjoxMDQuMDg1OTM3NSwieSI6NDc2Ljk5OTk5NjE4NTMwMjczfV0=" data-look="neo" marker-end="url(#aidr-models_classDiagram-dependencyEnd-margin)"></path><path d="M161.41276041666666,135L161.41276041666666,147.92893218813452Q161.41276041666666,155 154.34169260480118,155L111.15700531186548,155Q104.0859375,155 104.0859375,162.07106781186548L104.0859375,228.99999809265137" id="aidr-models-id_Cart_CartItem_2" class="edge-thickness-normal edge-pattern-solid relation" style="stroke-dasharray: 0 0 145.99847412109375 0; stroke-dashoffset: 0;;;;" data-edge="true" data-et="edge" data-id="id_Cart_CartItem_2" data-points="W3sieCI6MTYxLjQxMjc2MDQxNjY2NjY2LCJ5IjoxMzV9LHsieCI6MTYxLjQxMjc2MDQxNjY2NjY2LCJ5IjoxNTV9LHsieCI6MTA0LjA4NTkzNzUsInkiOjE1NX0seyJ4IjoxMDQuMDg1OTM3NSwieSI6MjM0Ljk5OTk5ODA5MjY1MTM3fV0=" data-look="neo" marker-end="url(#aidr-models_classDiagram-dependencyEnd-margin)"></path><path d="M224.56380208333334,135L224.56380208333334,147.92893218813452Q224.56380208333334,155 231.63486989519882,155L274.8195571881345,155Q281.890625,155 281.890625,162.07106781186548L281.890625,228.99999809265137" id="aidr-models-id_Cart_Customer_3" class="edge-thickness-normal edge-pattern-solid relation" style="stroke-dasharray: 0 0 145.99850463867188 0; stroke-dashoffset: 0;;;;" data-edge="true" data-et="edge" data-id="id_Cart_Customer_3" data-points="W3sieCI6MjI0LjU2MzgwMjA4MzMzMzM0LCJ5IjoxMzV9LHsieCI6MjI0LjU2MzgwMjA4MzMzMzM0LCJ5IjoxNTV9LHsieCI6MjgxLjg5MDYyNSwieSI6MTU1fSx7IngiOjI4MS44OTA2MjUsInkiOjIzNC45OTk5OTgwOTI2NTEzN31d" data-look="neo" marker-end="url(#aidr-models_classDiagram-dependencyEnd-margin)"></path></g><g class="edgeLabels"><g class="edgeLabel" transform="translate(103.59375, 426.99999713897705)"><g class="label" data-id="id_CartItem_Product_1" transform="translate(0, -9.000000476837158)"><g><rect class="background" style="" x="-31.5078125" y="-0.9999990463256836" width="63.015625" height="19.999999046325684"></rect><text y="-10.1" text-anchor="middle" style=""><tspan class="text-outer-tspan row" x="0" y="-0.1em" dy="1.1em" text-anchor="middle"><tspan font-style="normal" class="text-inner-tspan" font-weight="normal">product</tspan></tspan></text></g></g></g><g class="edgeLabel" transform="translate(103.6640625, 184.99999904632568)"><g class="label" data-id="id_Cart_CartItem_2" transform="translate(0, -9.000000476837158)"><g><rect class="background" style="" x="-23.078125" y="-0.9999990463256836" width="46.15625" height="19.999999046325684"></rect><text y="-10.1" text-anchor="middle" style=""><tspan class="text-outer-tspan row" x="0" y="-0.1em" dy="1.1em" text-anchor="middle"><tspan font-style="normal" class="text-inner-tspan" font-weight="normal">items</tspan></tspan></text></g></g></g><g class="edgeLabel" transform="translate(281.609375, 184.99999904632568)"><g class="label" data-id="id_Cart_Customer_3" transform="translate(0, -9.000000476837158)"><g><rect class="background" style="" x="-35.71875" y="-0.9999990463256836" width="71.4375" height="19.999999046325684"></rect><text y="-10.1" text-anchor="middle" style=""><tspan class="text-outer-tspan row" x="0" y="-0.1em" dy="1.1em" text-anchor="middle"><tspan font-style="normal" class="text-inner-tspan" font-weight="normal">customer</tspan></tspan></text></g></g></g></g><g class="nodes"><g class="node default" id="aidr-models-classId-CartItem-0" data-look="neo" transform="translate(104.0859375, 305.99999809265137)"><g class="basic label-container outer-path"><path d="M-92.0859375 -71 L92.0859375 -71 L92.0859375 71 L-92.0859375 71" stroke="none" stroke-width="0" fill="#16171d" style=""></path><path d="M-92.0859375 -71 C-34.39025982324108 -71, 23.305417853517838 -71, 92.0859375 -71 M-92.0859375 -71 C-54.01418872963603 -71, -15.942439959272065 -71, 92.0859375 -71 M92.0859375 -71 C92.0859375 -28.83726856742698, 92.0859375 13.325462865146037, 92.0859375 71 M92.0859375 -71 C92.0859375 -27.297160024614982, 92.0859375 16.405679950770036, 92.0859375 71 M92.0859375 71 C33.5841148744848 71, -24.917707751030406 71, -92.0859375 71 M92.0859375 71 C31.98676526569629 71, -28.112406968607417 71, -92.0859375 71 M-92.0859375 71 C-92.0859375 20.602226956846174, -92.0859375 -29.795546086307652, -92.0859375 -71 M-92.0859375 71 C-92.0859375 17.512465031429656, -92.0859375 -35.97506993714069, -92.0859375 -71" stroke="#3a3c4a" stroke-width="1.3" fill="none" stroke-dasharray="0 0" style=""></path></g><g class="annotation-group text" transform="translate(0, -51)"></g><g class="label-group text" transform="translate(-33.71875, -51)"><g class="label" style="font-weight: bolder" transform="translate(0,-7.999999523162842)"><g><rect class="background" style="stroke: none"></rect><text y="-10.1" style=""><tspan class="text-outer-tspan row" x="0" y="-0.1em" dy="1.1em" font-weight=""><tspan font-style="normal" class="text-inner-tspan" font-weight="">CartItem</tspan></tspan></text></g></g></g><g class="members-group text" transform="translate(-80.0859375, -11.000000953674316)"><g class="label" style="" transform="translate(0,-7.999999523162842)"><g><rect class="background" style="stroke: none"></rect><text y="-10.1" style=""><tspan class="text-outer-tspan row" x="0" y="-0.1em" dy="1.1em"><tspan font-style="normal" class="text-inner-tspan" font-weight="normal">product</tspan><tspan font-style="normal" class="text-inner-tspan" font-weight="normal"> Product</tspan></tspan></text></g></g><g class="label" style="" transform="translate(0,10.999999523162842)"><g><rect class="background" style="stroke: none"></rect><text y="-10.1" style=""><tspan class="text-outer-tspan row" x="0" y="-0.1em" dy="1.1em"><tspan font-style="normal" class="text-inner-tspan" font-weight="normal">price</tspan><tspan font-style="normal" class="text-inner-tspan" font-weight="normal"> Decimal</tspan></tspan></text></g></g><g class="label" style="" transform="translate(0,29.999998569488525)"><g><rect class="background" style="stroke: none"></rect><text y="-10.1" style=""><tspan class="text-outer-tspan row" x="0" y="-0.1em" dy="1.1em"><tspan font-style="normal" class="text-inner-tspan" font-weight="normal">quantity</tspan><tspan font-style="normal" class="text-inner-tspan" font-weight="normal"> int</tspan></tspan></text></g></g></g><g class="methods-group text" transform="translate(-80.0859375, 66.99999904632568)"></g><g class="divider" style=""><path d="M-92.0859375 -31.000000953674316 C-49.62562795418579 -30.999770406477325, -7.165318408371576 -30.999539859280333, 92.0859375 -30.999000953674315 M-92.0859375 -31.000000953674316 C-48.736478141241186 -30.999765578651072, -5.387018782482372 -30.99953020362783, 92.0859375 -30.999000953674315" stroke="#3a3c4a" stroke-width="1.3" fill="none" stroke-dasharray="0 0" style=""></path></g><g class="divider" style=""><path d="M-92.0859375 46.999999046325684 C-37.35429648328681 47.00029622330244, 17.37734453342638 47.0005934002792, 92.0859375 47.00099904632568 M-92.0859375 46.999999046325684 C-31.141924551267984 47.00032995468478, 29.802088397464033 47.00066086304388, 92.0859375 47.00099904632568" stroke="#3a3c4a" stroke-width="1.3" fill="none" stroke-dasharray="0 0" style=""></path></g></g><g class="node default" id="aidr-models-classId-Cart-1" data-look="neo" transform="translate(192.98828125, 73.5)"><g class="basic label-container outer-path"><path d="M-104.7265625 -61.5 L104.7265625 -61.5 L104.7265625 61.5 L-104.7265625 61.5" stroke="none" stroke-width="0" fill="#16171d" style=""></path><path d="M-104.7265625 -61.5 C-40.00446456590339 -61.5, 24.71763336819322 -61.5, 104.7265625 -61.5 M-104.7265625 -61.5 C-30.193185002822872 -61.5, 44.340192494354255 -61.5, 104.7265625 -61.5 M104.7265625 -61.5 C104.7265625 -13.293044968683681, 104.7265625 34.91391006263264, 104.7265625 61.5 M104.7265625 -61.5 C104.7265625 -20.70368231989044, 104.7265625 20.09263536021912, 104.7265625 61.5 M104.7265625 61.5 C24.888828397426934 61.5, -54.94890570514613 61.5, -104.7265625 61.5 M104.7265625 61.5 C40.14666192365094 61.5, -24.433238652698122 61.5, -104.7265625 61.5 M-104.7265625 61.5 C-104.7265625 17.167636467420024, -104.7265625 -27.16472706515995, -104.7265625 -61.5 M-104.7265625 61.5 C-104.7265625 15.882331719925396, -104.7265625 -29.735336560149207, -104.7265625 -61.5" stroke="#3a3c4a" stroke-width="1.3" fill="none" stroke-dasharray="0 0" style=""></path></g><g class="annotation-group text" transform="translate(0, -41.5)"></g><g class="label-group text" transform="translate(-16.859375, -41.5)"><g class="label" style="font-weight: bolder" transform="translate(0,-7.999999523162842)"><g><rect class="background" style="stroke: none"></rect><text y="-10.1" style=""><tspan class="text-outer-tspan row" x="0" y="-0.1em" dy="1.1em" font-weight=""><tspan font-style="normal" class="text-inner-tspan" font-weight="">Cart</tspan></tspan></text></g></g></g><g class="members-group text" transform="translate(-92.7265625, -1.5000009536743164)"><g class="label" style="" transform="translate(0,-7.999999523162842)"><g><rect class="background" style="stroke: none"></rect><text y="-10.1" style=""><tspan class="text-outer-tspan row" x="0" y="-0.1em" dy="1.1em"><tspan font-style="normal" class="text-inner-tspan" font-weight="normal">items</tspan><tspan font-style="normal" class="text-inner-tspan" font-weight="normal"> list&lt;CartItem&gt;</tspan></tspan></text></g></g><g class="label" style="" transform="translate(0,10.999999523162842)"><g><rect class="background" style="stroke: none"></rect><text y="-10.1" style=""><tspan class="text-outer-tspan row" x="0" y="-0.1em" dy="1.1em"><tspan font-style="normal" class="text-inner-tspan" font-weight="normal">customer</tspan><tspan font-style="normal" class="text-inner-tspan" font-weight="normal"> Customer</tspan></tspan></text></g></g></g><g class="methods-group text" transform="translate(-92.7265625, 57.499999046325684)"></g><g class="divider" style=""><path d="M-104.7265625 -21.500000953674316 C-36.283121875868616 -21.49967418155944, 32.16031874826277 -21.49934740944456, 104.7265625 -21.499000953674315 M-104.7265625 -21.500000953674316 C-23.899359078846445 -21.499615057290956, 56.92784434230711 -21.499229160907593, 104.7265625 -21.499000953674315" stroke="#3a3c4a" stroke-width="1.3" fill="none" stroke-dasharray="0 0" style=""></path></g><g class="divider" style=""><path d="M-104.7265625 37.499999046325684 C-58.1144043266899 37.50022158852062, -11.5022461533798 37.50044413071555, 104.7265625 37.50099904632568 M-104.7265625 37.499999046325684 C-24.463637763381783 37.50038224865192, 55.799286973236434 37.50076545097814, 104.7265625 37.50099904632568" stroke="#3a3c4a" stroke-width="1.3" fill="none" stroke-dasharray="0 0" style=""></path></g></g><g class="node default" id="aidr-models-classId-Product-2" data-look="neo" transform="translate(104.0859375, 514.9999961853027)"><g class="basic label-container outer-path"><path d="M-41.5078125 -37.99999952316284 L41.5078125 -37.99999952316284 L41.5078125 37.99999952316284 L-41.5078125 37.99999952316284" stroke="none" stroke-width="0" fill="#16171d" style=""></path><path d="M-41.5078125 -37.99999952316284 C-21.7537190926885 -37.99999952316284, -1.9996256853769978 -37.99999952316284, 41.5078125 -37.99999952316284 M-41.5078125 -37.99999952316284 C-20.167159795345086 -37.99999952316284, 1.1734929093098287 -37.99999952316284, 41.5078125 -37.99999952316284 M41.5078125 -37.99999952316284 C41.5078125 -17.534716823027118, 41.5078125 2.930565877108606, 41.5078125 37.99999952316284 M41.5078125 -37.99999952316284 C41.5078125 -15.840046342385502, 41.5078125 6.319906838391837, 41.5078125 37.99999952316284 M41.5078125 37.99999952316284 C18.616750485727792 37.99999952316284, -4.274311528544416 37.99999952316284, -41.5078125 37.99999952316284 M41.5078125 37.99999952316284 C24.05980111248203 37.99999952316284, 6.611789724964062 37.99999952316284, -41.5078125 37.99999952316284 M-41.5078125 37.99999952316284 C-41.5078125 21.192558294950324, -41.5078125 4.385117066737806, -41.5078125 -37.99999952316284 M-41.5078125 37.99999952316284 C-41.5078125 20.29665338995099, -41.5078125 2.5933072567391378, -41.5078125 -37.99999952316284" stroke="#3a3c4a" stroke-width="1.3" fill="none" stroke-dasharray="0 0" style=""></path></g><g class="annotation-group text" transform="translate(0, -17.999999523162842)"></g><g class="label-group text" transform="translate(-29.5078125, -17.999999523162842)"><g class="label" style="font-weight: bolder" transform="translate(0,-7.999999523162842)"><g><rect class="background" style="stroke: none"></rect><text y="-10.1" style=""><tspan class="text-outer-tspan row" x="0" y="-0.1em" dy="1.1em" font-weight=""><tspan font-style="normal" class="text-inner-tspan" font-weight="">Product</tspan></tspan></text></g></g></g><g class="members-group text" transform="translate(-29.5078125, 21.999999523162842)"></g><g class="methods-group text" transform="translate(-29.5078125, 51.99999952316284)"></g><g class="divider" style=""><path d="M-41.5078125 1.9999995231628418 C-21.017170386721308 2.000246351902772, -0.5265282734426151 2.000493180642702, 41.5078125 2.0009995231628417 M-41.5078125 1.9999995231628418 C-21.375578271025717 2.000242034548246, -1.243344042051433 2.000484545933651, 41.5078125 2.0009995231628417" stroke="#3a3c4a" stroke-width="1.3" fill="none" stroke-dasharray="0 0" style=""></path></g><g class="divider" style=""><path d="M-41.5078125 19.999999523162842 C-22.90468022543099 20.00022361510065, -4.3015479508619805 20.000447707038457, 41.5078125 20.000999523162843 M-41.5078125 19.999999523162842 C-11.818880905361816 20.000357153808817, 17.87005068927637 20.00071478445479, 41.5078125 20.000999523162843" stroke="#3a3c4a" stroke-width="1.3" fill="none" stroke-dasharray="0 0" style=""></path></g></g><g class="node default" id="aidr-models-classId-Customer-3" data-look="neo" transform="translate(281.890625, 272.99999809265137)"><g class="basic label-container outer-path"><path d="M-45.71875 -37.99999952316284 L45.71875 -37.99999952316284 L45.71875 37.99999952316284 L-45.71875 37.99999952316284" stroke="none" stroke-width="0" fill="#16171d" style=""></path><path d="M-45.71875 -37.99999952316284 C-22.68741794821118 -37.99999952316284, 0.34391410357763874 -37.99999952316284, 45.71875 -37.99999952316284 M-45.71875 -37.99999952316284 C-15.102643821678399 -37.99999952316284, 15.513462356643203 -37.99999952316284, 45.71875 -37.99999952316284 M45.71875 -37.99999952316284 C45.71875 -12.057858857946705, 45.71875 13.884281807269431, 45.71875 37.99999952316284 M45.71875 -37.99999952316284 C45.71875 -21.82937145769483, 45.71875 -5.6587433922268175, 45.71875 37.99999952316284 M45.71875 37.99999952316284 C25.394357989470976 37.99999952316284, 5.069965978941951 37.99999952316284, -45.71875 37.99999952316284 M45.71875 37.99999952316284 C17.700989795596147 37.99999952316284, -10.316770408807706 37.99999952316284, -45.71875 37.99999952316284 M-45.71875 37.99999952316284 C-45.71875 11.836361514865093, -45.71875 -14.327276493432656, -45.71875 -37.99999952316284 M-45.71875 37.99999952316284 C-45.71875 10.170621675055102, -45.71875 -17.658756173052637, -45.71875 -37.99999952316284" stroke="#3a3c4a" stroke-width="1.3" fill="none" stroke-dasharray="0 0" style=""></path></g><g class="annotation-group text" transform="translate(0, -17.999999523162842)"></g><g class="label-group text" transform="translate(-33.71875, -17.999999523162842)"><g class="label" style="font-weight: bolder" transform="translate(0,-7.999999523162842)"><g><rect class="background" style="stroke: none"></rect><text y="-10.1" style=""><tspan class="text-outer-tspan row" x="0" y="-0.1em" dy="1.1em" font-weight=""><tspan font-style="normal" class="text-inner-tspan" font-weight="">Customer</tspan></tspan></text></g></g></g><g class="members-group text" transform="translate(-33.71875, 21.999999523162842)"></g><g class="methods-group text" transform="translate(-33.71875, 51.99999952316284)"></g><g class="divider" style=""><path d="M-45.71875 1.9999995231628418 C-17.27276566840445 2.000310620735846, 11.1732186631911 2.000621718308851, 45.71875 2.0009995231628417 M-45.71875 1.9999995231628418 C-14.772310583249528 2.0003379667928267, 16.174128833500944 2.0006764104228116, 45.71875 2.0009995231628417" stroke="#3a3c4a" stroke-width="1.3" fill="none" stroke-dasharray="0 0" style=""></path></g><g class="divider" style=""><path d="M-45.71875 19.999999523162842 C-18.21552392847342 20.000300310324253, 9.28770214305316 20.000601097485664, 45.71875 20.000999523162843 M-45.71875 19.999999523162842 C-24.66977824155299 20.000229723810918, -3.62080648310598 20.000459924458994, 45.71875 20.000999523162843" stroke="#3a3c4a" stroke-width="1.3" fill="none" stroke-dasharray="0 0" style=""></path></g></g></g></g></g><defs><filter id="aidr-models-drop-shadow" height="130%" width="130%"><feDropShadow dx="4" dy="4" stdDeviation="0" flood-opacity="0.06" flood-color="#000000"></feDropShadow></filter></defs><defs><filter id="aidr-models-drop-shadow-small" height="150%" width="150%"><feDropShadow dx="2" dy="2" stdDeviation="0" flood-opacity="0.06" flood-color="#000000"></feDropShadow></filter></defs><linearGradient id="aidr-models-gradient" gradientUnits="objectBoundingBox" x1="0%" y1="0%" x2="100%" y2="0%"><stop offset="0%" stop-color="#3a3c4a" stop-opacity="1"></stop><stop offset="100%" stop-color="hsl(231.4285714286, 0%, 20%)" stop-opacity="1"></stop></linearGradient></svg>
+<figcaption>The Mermaid text, as GitHub draws it.</figcaption></figure>
+ </div>
+</section>
+
+<section id="commands">
  <div class="wrap">
-  <h2>What it shows</h2>
+  <h2>Commands</h2>
   <div class="tablewrap">
    <table>
-    <thead><tr><th>Command</th><th>What you see</th></tr></thead>
     <tbody>
-     <tr><td><code>aidr</code></td><td>Each step of the sessions in this folder, and each code change with the reason, a note and a question</td></tr>
+     <tr><td><code>aidr</code></td><td>Each step of the sessions in this folder, and each change with the reason, the code graph, a note and a question</td></tr>
      <tr><td><code>aidr --changes</code></td><td>Only the significant changes: planned, in process and completed</td></tr>
-     <tr><td><code>aidr --busywork</code></td><td>The raw log: every step, Claude's text and each prompt in full, as formatted Markdown</td></tr>
+     <tr><td><code>aidr --busywork</code></td><td>The raw log: every step, and each text and prompt in full</td></tr>
      <tr><td><code>aidr list</code></td><td>The Claude Code sessions in operation, once</td></tr>
-     <tr><td><code>aidr stage HEAD~3..HEAD</code></td><td>The Pydantic models in play and the CodeGraph changes of a commit or a range</td></tr>
+     <tr><td><code>aidr stage a..b</code></td><td>The Pydantic models in play and the code graph changes of a commit range</td></tr>
      <tr><td><code>aidr --global</code></td><td>Every folder, not only this one</td></tr>
+     <tr><td><code>aidr --no-mermaid</code></td><td>No Mermaid text under the code graphs and the models</td></tr>
     </tbody>
    </table>
   </div>
-  <p>With <a href="https://github.com/colbymchenry/codegraph">CodeGraph</a> and a <code>.codegraph/</code> index, aidr draws the callers and callees of each changed function. With <code>python3</code> on the PATH, it lists the Pydantic models that a change touches, with their fields and links. Long tool calls and background commands show their time and their last line of output.</p>
  </div>
 </section>
 
-<section id="trust">
+<section id="privacy">
  <div class="wrap">
   <h2>It reads. It writes nothing.</h2>
-  <p>aidr reads your own processes, the Claude Code transcripts under <code>~/.claude/projects</code>, and <code>git</code> in each session's folder. It reads Python models with Python's <code>ast</code> module, so no code of your project runs.</p>
-  <ul class="trust">
-   <li>It writes no file, opens no network connection, sends no telemetry and starts no server. A test checks the source for network and write calls.</li>
-   <li>It never shows a private file: <code>.env</code> files, SSH keys, cloud and Claude credentials, <code>*.tfvars</code> and more. You can add your own globs.</li>
-   <li>It masks tokens, keys, passwords and URL passwords in every line it prints.</li>
-   <li>It removes terminal control bytes, so a file or a prompt cannot write to your clipboard or change your screen.</li>
-  </ul>
-  <p>The package is about 1,600 lines of JavaScript and Python, with no dependencies and no install script. <a href="https://github.com/niccolox/aidr/tree/main/lib">Read it</a> before you run it.</p>
+  <p class="soft measure">The package is under 3,000 lines of JavaScript and Python, formatted with Biome, with no dependencies and no install script. <a href="https://github.com/niccolox/aidr/tree/main/lib">Read it</a> before you run it.</p>
+  <div class="ledger">
+   <div class="yes">
+    <h3>Reads</h3>
+    <ul>
+     <li><b>Your own processes,</b> to find the Claude Code sessions.</li>
+     <li><b>The transcripts</b> under <code>~/.claude/projects</code>.</li>
+     <li><b><code>git</code></b> in each session's folder, with read-only commands.</li>
+     <li><b>Python models</b> with the <code>ast</code> module. No project code runs.</li>
+    </ul>
+   </div>
+   <div class="no">
+    <h3>Never</h3>
+    <ul>
+     <li><b>Writes a file, opens a network connection</b> or sends telemetry. A test checks the source for both.</li>
+     <li><b>Shows a private file:</b> <code>.env</code>, SSH keys, cloud and Claude credentials, <code>*.tfvars</code>, and your own globs.</li>
+     <li><b>Prints a secret:</b> tokens, keys, passwords and URL passwords are masked on every line.</li>
+     <li><b>Passes control bytes</b> to your terminal, so a file cannot write to your clipboard.</li>
+    </ul>
+   </div>
+  </div>
  </div>
 </section>
 
 <section id="faq">
  <div class="wrap">
   <h2>Questions</h2>
-  <dl>
-   <dt>Does it send my code anywhere?</dt><dd>No. aidr opens no network connection.</dd>
-   <dt>Does it change my files or my sessions?</dt><dd>No. It only reads transcripts and runs read-only <code>git</code> commands.</dd>
-   <dt>Does it work with other coding agents?</dt><dd>Not now. It reads the transcript format of Claude Code.</dd>
-   <dt>What do I need?</dt><dd>Node 20 or later and <code>git</code>, on Linux or macOS. <code>python3</code> and <code>codegraph</code> are optional.</dd>
-   <dt>Why AGPL-3.0?</dt><dd>You can use, change and share aidr. If you give a changed version to others, or run it for others over a network, you share your changes under the same licence.</dd>
+  <dl class="faq">
+   <div><dt>Does it send my code anywhere?</dt><dd>No. AIDR opens no network connection.</dd></div>
+   <div><dt>Does it change my files or my sessions?</dt><dd>No. It reads transcripts and runs read-only <code>git</code> commands.</dd></div>
+   <div><dt>Does it work with other coding agents?</dt><dd>Not now. It reads the transcript format of Claude Code.</dd></div>
+   <div><dt>What do I need?</dt><dd>Node 20 or later and <code>git</code>, on Linux or macOS. <code>python3</code> and <code>codegraph</code> are optional.</dd></div>
+   <div><dt>Is it on npm?</dt><dd>Not yet. Install it from source; the npm package <code>devekko.aidr</code> comes next.</dd></div>
+   <div><dt>Why AGPL-3.0?</dt><dd>You can use, change and share AIDR. If you share a changed version, or run one for others over a network, you share your changes too.</dd></div>
   </dl>
  </div>
 </section>
 
 <section class="final">
  <div class="wrap">
-  <h2>Read the next change before you accept it</h2>
+  <h2>Read the next change before you accept it.</h2>
   <div class="cta"><a class="btn main" href="#install">Install from source</a><a class="btn alt" href="https://github.com/niccolox/aidr">Open on GitHub</a></div>
  </div>
 </section>
 </main>
 
-<footer class="wrap">aidr · GNU Affero General Public License v3.0 only · <a href="https://github.com/niccolox/aidr/blob/main/SECURITY.md">Report a security issue</a></footer>
+<footer class="wrap"><span>AIDR · AGPL-3.0-only</span><a href="https://github.com/niccolox/aidr/blob/main/SECURITY.md">Report a security issue</a><a href="https://github.com/niccolox/aidr/blob/main/CHANGELOG.md">Changelog</a></footer>
 
 <script>
+// Each line of a sample is its own block, so a new tab can stream its lines in.
+for(const pre of document.querySelectorAll('.panel pre,.mini pre')){
+ pre.innerHTML=pre.innerHTML.split('\n').map((l,i)=>`<span class="line" style="--i:${i}">${l||' '}</span>`).join('');
+}
+const tabs=[...document.querySelectorAll('[role="tab"]')];
+function choose(tab,focus){
+ for(const t of tabs){
+  const on=t===tab,panel=document.getElementById(t.getAttribute('aria-controls'));
+  t.setAttribute('aria-selected',on);t.tabIndex=on?0:-1;panel.hidden=!on;
+  if(on){panel.classList.remove('streaming');void panel.offsetWidth;panel.classList.add('streaming');}
+ }
+ if(focus)tab.focus();
+}
+for(const t of tabs){
+ t.addEventListener('click',()=>choose(t));
+ t.addEventListener('keydown',e=>{
+  const i=tabs.indexOf(t),n=e.key==='ArrowRight'?i+1:e.key==='ArrowLeft'?i-1:e.key==='Home'?0:e.key==='End'?tabs.length-1:null;
+  if(n!==null){e.preventDefault();choose(tabs[(n+tabs.length)%tabs.length],true);}
+ });
+}
+for(const a of document.querySelectorAll('[data-tab]'))a.addEventListener('click',()=>choose(document.getElementById('t-'+a.dataset.tab)));
 for(const b of document.querySelectorAll('[data-copy]')){
  b.addEventListener('click',async()=>{
-  const text=document.getElementById(b.dataset.copy+'-text').textContent;
-  try{await navigator.clipboard.writeText(text);b.textContent='Copied';}catch{b.textContent='Select and copy';}
+  const text=document.getElementById(b.dataset.copy).textContent.replace(/^\$ /gm,'');
+  try{await navigator.clipboard.writeText(text);b.textContent='Copied';}catch{b.textContent='Select the text';}
   setTimeout(()=>{b.textContent='Copy';},2000);
  });
 }

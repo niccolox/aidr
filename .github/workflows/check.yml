@@ -19,6 +19,8 @@ jobs:
       - run: node --test test/*.test.mjs
       - name: Only the listed files ship
         run: node scripts/check-pack.mjs
+      - name: The code is formatted with Biome
+        run: npx --yes @biomejs/biome@2.6.6 format .
       - name: No install script
         run: node -e "const s=require('./package.json').scripts||{};for(const k of ['preinstall','install','postinstall','prepare'])if(s[k])process.exit(1)"
   secrets:

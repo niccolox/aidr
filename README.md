@@ -19,7 +19,7 @@ on what to check, and one question to answer before you go on. It reads; it writ
 ```text
 10:42:07  shop  🔧 In process · Edit
   ✏️  app/cart.py  +1 -1
-  │ 💭 Why: The total ignored the quantity of each line, so two mugs cost the price of one.
+  │ 💭 Why: The total ignored the quantity, so two mugs cost the price of one.
   │   def total(items):
   │ -     return sum(i.price for i in items)
   │ +     return sum(i.price * i.quantity for i in items)
@@ -64,11 +64,14 @@ remove the command, run `npm unlink -g devekko.aidr`.
 | `aidr list` | The Claude Code sessions in operation, once |
 | `aidr stage HEAD~3..HEAD` | The Pydantic models in play and the CodeGraph changes of a commit or a range |
 | `aidr --global` | Every folder, not only this one |
+| `aidr --no-mermaid` | No Mermaid text under the code graphs and the models |
 
 With [CodeGraph](https://github.com/colbymchenry/codegraph) and a `.codegraph/` index, aidr draws the callers and
 callees of each changed function. With `python3` on the PATH, it lists the Pydantic models that a change touches,
-with their fields and links (`--mermaid` adds a Mermaid diagram). Long tool calls and background commands show their
-time and their last line of output.
+with their fields and links. Long tool calls and background commands show their time and their last line of output.
+
+Each code graph and each set of models also prints as Mermaid (a `flowchart` and a `classDiagram`). Paste it into a
+pull request or a document and GitHub draws it. `--no-mermaid` turns it off.
 
 Run `aidr --help` for all options.
 
@@ -84,7 +87,7 @@ so no code of your project runs.
 - It masks tokens, keys, passwords and URL passwords in every line it prints.
 - It removes terminal control bytes, so a file or a prompt cannot write to your clipboard or change your screen.
 
-The package is about 1,600 lines of JavaScript and Python, with no dependencies and no install script. Read
+The package is under 3,000 lines of JavaScript and Python, formatted with Biome, with no dependencies and no install script. Read
 [lib/](lib/) before you run it.
 
 ## Requirements
