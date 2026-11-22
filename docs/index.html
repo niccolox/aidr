@@ -1,0 +1,223 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>aidr: see what Claude Code changed, and why</title>
+<meta name="description" content="aidr runs in a second terminal next to Claude Code. For each edit it shows the diff, Claude's reason, a note on what to check and one question. Read only, no network, AGPL-3.0.">
+<link rel="icon" href="logo.svg" type="image/svg+xml">
+<style>
+:root{
+ --paper:#f7f6f2;--ink:#1b1b22;--soft:#55556a;--line:#dddbd2;--panel:#ffffff;
+ --term:#16161d;--term-ink:#d9d9e3;--term-soft:#8b8ba0;--red:#e5606b;--green:#4fc28a;--why:#c77ddb;--ask:#e8c15a;
+ --accent:#6b3fa0;--accent-ink:#ffffff;
+ --mono:ui-monospace,"SF Mono","JetBrains Mono",Menlo,Consolas,monospace;
+ --sans:system-ui,-apple-system,"Segoe UI",Roboto,sans-serif;
+ color-scheme:light;
+}
+@media (prefers-color-scheme:dark){:root{
+ --paper:#101015;--ink:#e9e9f0;--soft:#a2a2b5;--line:#2a2a35;--panel:#17171f;--term:#0b0b10;
+ --accent:#c79bf0;--accent-ink:#16101d;color-scheme:dark;
+}}
+*{box-sizing:border-box}
+body{margin:0;background:var(--paper);color:var(--ink);font:17px/1.6 var(--sans)}
+.wrap{max-width:68rem;margin:0 auto;padding-inline:clamp(16px,4vw,40px)}
+a{color:var(--accent)}
+code,pre{font-family:var(--mono)}
+header{padding-block:20px;display:flex;align-items:center;gap:12px}
+header img{width:36px;height:36px}
+header b{font:600 18px var(--mono)}
+header nav{margin-left:auto;display:flex;gap:20px;font-size:15px}
+header nav a{color:var(--soft);text-decoration:none}
+header nav a:hover{color:var(--ink)}
+.hero{display:grid;grid-template-columns:minmax(0,1fr) minmax(0,1.15fr);gap:48px;align-items:center;padding-block:48px 72px}
+h1{font-size:clamp(2.2rem,5vw,3.6rem);line-height:1.05;letter-spacing:-.02em;margin:0 0 20px}
+.lead{font-size:1.15rem;color:var(--soft);margin:0 0 28px;max-width:34rem}
+.cta{display:flex;flex-wrap:wrap;gap:12px;align-items:center}
+.btn{display:inline-block;padding:12px 20px;border-radius:8px;font-weight:600;text-decoration:none;border:1px solid var(--accent)}
+.btn.main{background:var(--accent);color:var(--accent-ink)}
+.btn.alt{color:var(--accent)}
+.small{font-size:14px;color:var(--soft)}
+.term{background:var(--term);color:var(--term-ink);border-radius:12px;padding:18px 20px;font:13.5px/1.65 var(--mono);overflow-x:auto;box-shadow:0 1px 0 var(--line)}
+.term .bar{display:flex;gap:6px;margin-bottom:14px}
+.term .bar i{width:10px;height:10px;border-radius:50%;background:#3a3a48}
+.term pre{margin:0;white-space:pre}
+.f{color:#ffffff;font-weight:600}.s{color:var(--term-soft)}.r{color:var(--red)}.g{color:var(--green)}.w{color:var(--why)}.q{color:var(--ask)}.n{color:#7fb4f0}
+section{padding-block:56px;border-top:1px solid var(--line)}
+h2{font-size:1.7rem;letter-spacing:-.01em;margin:0 0 12px}
+section > .wrap > p{max-width:44rem}
+.steps{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:24px;margin-top:28px;padding:0;list-style:none;counter-reset:s}
+.steps li{counter-increment:s;background:var(--panel);border:1px solid var(--line);border-radius:10px;padding:20px}
+.steps li::before{content:counter(s);display:inline-grid;place-items:center;width:28px;height:28px;border-radius:50%;background:var(--accent);color:var(--accent-ink);font-weight:700;font-size:14px;margin-bottom:10px}
+.steps h3{margin:0 0 6px;font-size:1.05rem}
+.steps p{margin:0;color:var(--soft);font-size:15.5px}
+.code{position:relative;margin-top:28px}
+.code pre{background:var(--term);color:var(--term-ink);border-radius:10px;padding:18px 20px;margin:0;overflow-x:auto;font-size:14px;line-height:1.7}
+.code button{position:absolute;top:10px;right:10px;font:600 13px var(--sans);padding:6px 10px;border-radius:6px;border:1px solid #3a3a48;background:#22222c;color:var(--term-ink);cursor:pointer}
+.code button:focus-visible,.btn:focus-visible{outline:3px solid var(--ask);outline-offset:2px}
+.tablewrap{overflow-x:auto;margin-top:24px}
+table{border-collapse:collapse;width:100%;min-width:34rem;font-size:15.5px}
+th,td{text-align:left;padding:12px 14px;border-bottom:1px solid var(--line);vertical-align:top}
+th{font-size:13px;text-transform:uppercase;letter-spacing:.05em;color:var(--soft)}
+td code{white-space:nowrap;font-size:14px}
+.trust{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:16px 40px;margin-top:24px;padding:0;list-style:none}
+.trust li{padding-left:28px;position:relative}
+.trust li::before{content:"";position:absolute;left:0;top:.55em;width:12px;height:12px;border-radius:3px;background:var(--green)}
+dl{margin:24px 0 0;max-width:46rem}
+dt{font-weight:600;margin-top:20px}
+dd{margin:4px 0 0;color:var(--soft)}
+.final{text-align:center}
+.final .cta{justify-content:center;margin-top:20px}
+footer{padding-block:32px;border-top:1px solid var(--line);font-size:14px;color:var(--soft)}
+@media (max-width:860px){
+ .hero{grid-template-columns:1fr;gap:32px;padding-block:24px 48px}
+ .steps,.trust{grid-template-columns:1fr}
+ header nav{gap:14px}
+ section{padding-block:40px}
+ .code pre{padding-top:48px}
+ table{min-width:0}
+ thead{display:none}
+ tr{display:block;padding-block:10px;border-bottom:1px solid var(--line)}
+ td{display:block;border:0;padding:2px 0}
+ td code{white-space:normal}
+}
+@media (max-width:480px){header nav a.opt{display:none}}
+</style>
+</head>
+<body>
+<header class="wrap">
+ <img src="logo.svg" alt="" width="36" height="36"><b>aidr</b>
+ <nav><a class="opt" href="#how">How it works</a><a class="opt" href="#trust">Privacy</a><a href="https://github.com/niccolox/aidr">GitHub</a></nav>
+</header>
+
+<main>
+<div class="wrap hero">
+ <div>
+  <h1>See what Claude Code changed, and why.</h1>
+  <p class="lead">aidr runs in a second terminal next to Claude Code. For each edit, it shows the diff, the reason Claude gave, a note on what to check, and one question to answer before you go on.</p>
+  <div class="cta">
+   <a class="btn main" href="#install">Install from source</a>
+   <a class="btn alt" href="https://github.com/niccolox/aidr/tree/main/lib">Read the code</a>
+  </div>
+  <p class="small">Read only. No network. No dependencies. Linux and macOS. AGPL-3.0.</p>
+ </div>
+ <div class="term" role="img" aria-label="Terminal output of aidr for one edit: the file, Claude's reason, the diff, a note and a question">
+  <div class="bar"><i></i><i></i><i></i></div>
+<pre><span class="s">$</span> aidr
+<span class="s">10:42:07</span>  <span class="n">shop</span>  🔧 <span class="n">In process</span> <span class="s">·</span> <span class="f">Edit</span>
+  ✏️  <span class="f">app/cart.py</span>  <span class="g">+1</span> <span class="r">-1</span>
+  <span class="s">│</span> <span class="w">💭 Why: The total ignored the quantity of each line,</span>
+  <span class="s">│</span> <span class="w">so two mugs cost the price of one.</span>
+  <span class="s">│</span>   <span class="n">def</span> total(items):
+  <span class="s">│</span> <span class="r">-     return sum(i.price for i in items)</span>
+  <span class="s">│</span> <span class="g">+     return sum(i.price * i.quantity for i in items)</span>
+  <span class="s">│</span> 📘 <span class="s">Changes what a function gives back: check</span>
+  <span class="s">│</span> <span class="s">every place that reads its result.</span>
+  <span class="s">│</span> <span class="q">❓ Check yourself: Why was this change needed?</span></pre>
+ </div>
+</div>
+
+<section id="why">
+ <div class="wrap">
+  <h2>You stay the author of your code</h2>
+  <p>Claude Code edits files faster than you can read them. After an hour of work, your repository holds code that you did not write and may not be able to explain. aidr puts each change in front of you at the time Claude makes it, with the reason next to the lines.</p>
+ </div>
+</section>
+
+<section id="how">
+ <div class="wrap">
+  <h2>How it works</h2>
+  <ol class="steps">
+   <li><h3>Install aidr</h3><p>Clone the repository and link the command. There are no packages to download.</p></li>
+   <li><h3>Start Claude Code</h3><p>Work in your project as usual. aidr needs no plugin and no change to your settings.</p></li>
+   <li><h3>Run aidr beside it</h3><p>Open a second terminal in the same folder and type <code>aidr</code>. Each change shows as Claude makes it.</p></li>
+  </ol>
+ </div>
+</section>
+
+<section id="install">
+ <div class="wrap">
+  <h2>Install from source</h2>
+  <p>The npm package <code>devekko.aidr</code> is not published yet. You need Node 20 or later and <code>git</code>.</p>
+  <div class="code">
+   <button type="button" data-copy="install">Copy</button>
+<pre id="install-text">git clone https://github.com/niccolox/aidr.git
+cd aidr
+npm test     # no dependencies to install
+npm link     # puts the aidr command on your PATH
+
+cd ~/code/your-project
+aidr</pre>
+  </div>
+  <p class="small">Without <code>npm link</code>, run <code>node /path/to/aidr/bin/aidr.mjs</code>. To update, run <code>git pull</code> in the clone. To remove the command, run <code>npm unlink -g devekko.aidr</code>.</p>
+ </div>
+</section>
+
+<section id="shows">
+ <div class="wrap">
+  <h2>What it shows</h2>
+  <div class="tablewrap">
+   <table>
+    <thead><tr><th>Command</th><th>What you see</th></tr></thead>
+    <tbody>
+     <tr><td><code>aidr</code></td><td>Each step of the sessions in this folder, and each code change with the reason, a note and a question</td></tr>
+     <tr><td><code>aidr --changes</code></td><td>Only the significant changes: planned, in process and completed</td></tr>
+     <tr><td><code>aidr --busywork</code></td><td>The raw log: every step, Claude's text and each prompt in full, as formatted Markdown</td></tr>
+     <tr><td><code>aidr list</code></td><td>The Claude Code sessions in operation, once</td></tr>
+     <tr><td><code>aidr stage HEAD~3..HEAD</code></td><td>The Pydantic models in play and the CodeGraph changes of a commit or a range</td></tr>
+     <tr><td><code>aidr --global</code></td><td>Every folder, not only this one</td></tr>
+    </tbody>
+   </table>
+  </div>
+  <p>With <a href="https://github.com/colbymchenry/codegraph">CodeGraph</a> and a <code>.codegraph/</code> index, aidr draws the callers and callees of each changed function. With <code>python3</code> on the PATH, it lists the Pydantic models that a change touches, with their fields and links. Long tool calls and background commands show their time and their last line of output.</p>
+ </div>
+</section>
+
+<section id="trust">
+ <div class="wrap">
+  <h2>It reads. It writes nothing.</h2>
+  <p>aidr reads your own processes, the Claude Code transcripts under <code>~/.claude/projects</code>, and <code>git</code> in each session's folder. It reads Python models with Python's <code>ast</code> module, so no code of your project runs.</p>
+  <ul class="trust">
+   <li>It writes no file, opens no network connection, sends no telemetry and starts no server. A test checks the source for network and write calls.</li>
+   <li>It never shows a private file: <code>.env</code> files, SSH keys, cloud and Claude credentials, <code>*.tfvars</code> and more. You can add your own globs.</li>
+   <li>It masks tokens, keys, passwords and URL passwords in every line it prints.</li>
+   <li>It removes terminal control bytes, so a file or a prompt cannot write to your clipboard or change your screen.</li>
+  </ul>
+  <p>The package is about 1,600 lines of JavaScript and Python, with no dependencies and no install script. <a href="https://github.com/niccolox/aidr/tree/main/lib">Read it</a> before you run it.</p>
+ </div>
+</section>
+
+<section id="faq">
+ <div class="wrap">
+  <h2>Questions</h2>
+  <dl>
+   <dt>Does it send my code anywhere?</dt><dd>No. aidr opens no network connection.</dd>
+   <dt>Does it change my files or my sessions?</dt><dd>No. It only reads transcripts and runs read-only <code>git</code> commands.</dd>
+   <dt>Does it work with other coding agents?</dt><dd>Not now. It reads the transcript format of Claude Code.</dd>
+   <dt>What do I need?</dt><dd>Node 20 or later and <code>git</code>, on Linux or macOS. <code>python3</code> and <code>codegraph</code> are optional.</dd>
+   <dt>Why AGPL-3.0?</dt><dd>You can use, change and share aidr. If you give a changed version to others, or run it for others over a network, you share your changes under the same licence.</dd>
+  </dl>
+ </div>
+</section>
+
+<section class="final">
+ <div class="wrap">
+  <h2>Read the next change before you accept it</h2>
+  <div class="cta"><a class="btn main" href="#install">Install from source</a><a class="btn alt" href="https://github.com/niccolox/aidr">Open on GitHub</a></div>
+ </div>
+</section>
+</main>
+
+<footer class="wrap">aidr · GNU Affero General Public License v3.0 only · <a href="https://github.com/niccolox/aidr/blob/main/SECURITY.md">Report a security issue</a></footer>
+
+<script>
+for(const b of document.querySelectorAll('[data-copy]')){
+ b.addEventListener('click',async()=>{
+  const text=document.getElementById(b.dataset.copy+'-text').textContent;
+  try{await navigator.clipboard.writeText(text);b.textContent='Copied';}catch{b.textContent='Select and copy';}
+  setTimeout(()=>{b.textContent='Copy';},2000);
+ });
+}
+</script>
+</body>
+</html>

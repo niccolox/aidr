@@ -4,7 +4,7 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
 import {execFileSync} from 'node:child_process';
-import {existsSync,mkdtempSync,rmSync,writeFileSync} from 'node:fs';
+import {existsSync,mkdtempSync,readFileSync,readdirSync,rmSync,writeFileSync} from 'node:fs';
 import {tmpdir} from 'node:os';
 import {join} from 'node:path';
 import {GIT_SAFE,GitChanges,isPrivatePath,mask,renderChange,safe,stripControls,userPrivateRules} from '../lib/code-tutor.mjs';
@@ -130,4 +130,17 @@ test('the raw log (aidr:busywork) keeps the whole text as filtered lines',()=>{
  assert.deepEqual(prompt.body,['one','two']);
  const [long]=stepsOf({type:'user',message:{content:'word '.repeat(2000)}},{full:true});
  assert.deepEqual(long.body,['…']);
+});
+
+test('no module opens a network connection or writes a file (the README claim)',()=>{
+ const here=import.meta.dirname,dir=existsSync(join(here,'code-tutor.mjs'))?here:join(here,'..','lib');
+ const sources=readdirSync(dir).filter(f=>/\.(mjs|py)$/.test(f)&&!f.endsWith('.test.mjs')&&f!=='pack.mjs');
+ assert.ok(sources.length>=8,'the modules are found');
+ const net=/node:(?:net|http|https|http2|dgram|tls|dns)\b|\bfetch\(|\bWebSocket\b|\bimport (?:socket|urllib|http|requests)\b/;
+ const write=/\b(?:writeFile|appendFile|createWriteStream|mkdir|rmSync|unlink|rename)\w*\(|open\([^)]*['"][wax]/;
+ for(const f of sources){
+  const text=readFileSync(join(dir,f),'utf8');
+  assert.doesNotMatch(text,net,f+' uses the network');
+  assert.doesNotMatch(text,write,f+' writes a file');
+ }
 });

@@ -1,0 +1,9 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 96 96" role="img" aria-labelledby="t">
+  <title id="t">aidr: a change rail with a removed line, an added line and the reason</title>
+  <rect width="96" height="96" rx="20" fill="#16161d"/>
+  <rect x="20" y="20" width="5" height="56" rx="2.5" fill="#5b5b6e"/>
+  <rect x="34" y="24" width="34" height="9" rx="4.5" fill="#e5606b"/>
+  <rect x="34" y="43" width="44" height="9" rx="4.5" fill="#4fc28a"/>
+  <rect x="34" y="62" width="24" height="9" rx="4.5" fill="#c77ddb"/>
+  <circle cx="68" cy="66.5" r="4.5" fill="#e8c15a"/>
+</svg>
