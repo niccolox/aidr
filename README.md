@@ -7,7 +7,7 @@
 <p align="center"><b>See what Claude Code changed, and why.</b></p>
 
 <p align="center">
-  <a href="https://niccolox.github.io/aidr/">Website</a> ·
+  <a href="https://www.niccolox.com/aidr/">Website</a> ·
   <a href="#install-from-source">Install from source</a> ·
   <a href="SECURITY.md">Security</a> ·
   AGPL-3.0-only · version 0.1.0
