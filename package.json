@@ -1,0 +1,38 @@
+{
+  "name": "devekko.aidr",
+  "version": "0.1.0",
+  "description": "Follow your Claude Code sessions in the terminal and understand their code changes: diffs with the reason, the Pydantic ontology at play, the CodeGraph map, and the stage report. Read only.",
+  "type": "module",
+  "bin": {
+    "aidr": "bin/aidr.mjs"
+  },
+  "files": [
+    "bin/",
+    "lib/",
+    "README.md",
+    "LICENSE"
+  ],
+  "engines": {
+    "node": ">=20"
+  },
+  "license": "AGPL-3.0-only",
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/niccolox/aidr.git"
+  },
+  "homepage": "https://github.com/niccolox/aidr",
+  "bugs": {
+    "url": "https://github.com/niccolox/aidr/issues"
+  },
+  "keywords": [
+    "claude",
+    "claude-code",
+    "terminal",
+    "code-review",
+    "pydantic",
+    "codegraph"
+  ],
+  "scripts": {
+    "test": "node --test 'test/*.test.mjs'"
+  }
+}
