@@ -263,8 +263,8 @@ over a network, you share your changes under the same licence.
 
 ## 🤝 Work with the author
 
-aidr comes from daily work with Claude Code on a large commerce platform. I am Nicholas Roberts: 25 years as a
-product director and full-stack engineer, and the founder and CTO of [Devekko](https://devekko.dev).
+aidr comes from daily work with Claude Code & Codex on an agentic ecommerce platform. I am Nicholas Roberts:
+25 years as a product director and full-stack engineer, and the founder and CTO of [Devekko](https://devekko.dev).
 
 I work with teams on:
 
