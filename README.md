@@ -10,8 +10,16 @@
   <a href="https://www.niccolox.com/aidr/">Website</a> ·
   <a href="#install-from-source">Install from source</a> ·
   <a href="SECURITY.md">Security</a> ·
+  <a href="#-work-with-the-author"><b>Work with me</b></a> ·
   AGPL-3.0-only · version 0.1.0
 </p>
+
+> [!TIP]
+> **aidr is made by Nicholas Roberts, founder and CTO of [Devekko](https://devekko.dev).** I build Claude Code
+> workflows, AI agents and commerce systems for teams that must read and trust the code their agents write.
+> **Want this kind of tooling on your team?** Email [niccolox@devekko.com](mailto:niccolox@devekko.com) ·
+> [LinkedIn](https://www.linkedin.com/in/niccolo/) · [devekko.dev](https://devekko.dev) ·
+> [niccolox.com](https://www.niccolox.com)
 
 aidr runs in a second terminal next to Claude Code. It starts minimal: each step on one line, and each code change
 as one line with its file and line counts. Add a flag for each view you want, and the flags add up: the diff with the
@@ -252,6 +260,24 @@ It sends the changed lines only with `--learn-code`, with secrets masked, and ne
 
 **Why AGPL-3.0?** You can use, change and share aidr. If you give a changed version to others, or run it for others
 over a network, you share your changes under the same licence.
+
+## 🤝 Work with the author
+
+aidr comes from daily work with Claude Code on a large commerce platform. I am Nicholas Roberts: 25 years as a
+product director and full-stack engineer, and the founder and CTO of [Devekko](https://devekko.dev).
+
+I work with teams on:
+
+- **Claude Code in your workflow:** agents that make changes your engineers can read, review and test.
+- **AI agents in production:** Claude, Pydantic AI and Prefect, with typed outputs and a person who approves.
+- **Commerce and data platforms:** stores, payments, catalogues and the data work behind them.
+
+| Contact | |
+| --- | --- |
+| ✉️ Email | [niccolox@devekko.com](mailto:niccolox@devekko.com) |
+| 💼 LinkedIn | [linkedin.com/in/niccolo](https://www.linkedin.com/in/niccolo/) |
+| 🏢 Devekko | [devekko.dev](https://devekko.dev) |
+| 🌐 Personal site | [niccolox.com](https://www.niccolox.com) |
 
 ## ⚖️ Licence
 
